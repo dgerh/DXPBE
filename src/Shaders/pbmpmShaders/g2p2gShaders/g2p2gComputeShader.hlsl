@@ -335,6 +335,129 @@ void main(uint indexInGroup : SV_GroupIndex, uint3 groupId : SV_GroupID)
                 {
                     particle.deformationDisplacement = (Identity + particle.deformationDisplacement) * particle.deformationGradient;
                 }
+                if (particle.material != MaterialLiquid) {
+
+                    SVDResult svdResult = svd(particle.deformationGradient);
+                    // Safety clamp to prevent numerical instability
+                    // Clamp each singular value to prevent extreme deformation
+                    // 
+                    //svdResult.Sigma = clamp(svdResult.Sigma, float3(0.1, 0.1, 0.1), float3(10000.0, 10000.0, 10000.0));
+                    svdResult.Sigma = clamp(svdResult.Sigma, float2(0.1, 0.1), float2(10000.0, 10000.0));
+
+                    if (particle.material == MaterialSand) {
+                        // Drucker - Prager sand based on :
+                        // Gergely Klár, Theodore Gast, Andre Pradhana, Chuyuan Fu, Craig Schroeder, Chenfanfu Jiang, and Joseph Teran. 2016.
+                        // Drucker-prager elastoplasticity for sand animation. ACM Trans. Graph. 35, 4, Article 103 (July 2016), 12 pages.
+                        // https://doi.org/10.1145/2897824.2925906
+                        float sinPhi = sin(g_simConstants.frictionAngle * 3.14159 / 180.0);
+                        float alpha = sqrt(2.0 / 3.0) * 2.0 * sinPhi / (3.0 - sinPhi);
+                        float beta = 0.5;
+
+                        //float3 eDiag = log(max(abs(svdResult.Sigma), float3(1e-6, 1e-6, 1e-6)));
+                        //float3x3 eps = diag(eDiag);
+                        //float trace = tr(eps) + particle.logJp;
+
+                        //float3x3 eHat = eps - (trace / 3.0) * Identity3D;  // Note: Changed from 2 to 3 for 3D
+                        //float frobNrm = sqrt(dot(eHat[0], eHat[0]) +
+                        //    dot(eHat[1], eHat[1]) +
+                        //    dot(eHat[2], eHat[2]));
+
+                        float2 eDiag = log(max(abs(svdResult.Sigma), float2(1e-6, 1e-6)));
+                        float2x2 eps = diag(eDiag);
+                        float trace = tr(eps) + particle.logJp;
+
+                        float2x2 eHat = eps - (trace / 2.0) * Identity;  // Note: Changed from 2 to 3 for 3D
+                        float frobNrm = sqrt(dot(eHat[0], eHat[0]) +
+                            dot(eHat[1], eHat[1]));
+
+                        float elasticityRatio = 0.9f;
+                        if (trace >= 0.0)
+                        {
+                            // Expansive motion - reset deformation
+                            //svdResult.Sigma = float3(1.0, 1.0, 1.0);
+                            svdResult.Sigma = float2(1.0, 1.0);
+                            particle.logJp = beta * trace;
+                        }
+                        else
+                        {
+                            particle.logJp = 0;
+                            float deltaGammaI = frobNrm + (elasticityRatio + 1.0) * trace * alpha;
+
+                            if (deltaGammaI > 0)
+                            {
+                                // Project to yield surface
+                                //float3 h = eDiag - deltaGammaI / frobNrm * (eDiag - float3(trace / 3.0, trace / 3.0, trace / 3.0));
+                                float2 h = eDiag - deltaGammaI / frobNrm * (eDiag - (trace * 0.5));
+                                svdResult.Sigma = exp(h);
+                            }
+                        }
+                        particle.deformationGradient = mul(mul(svdResult.U, diag(svdResult.Sigma)), svdResult.Vt);
+                    }
+
+                    else if (particle.material == MaterialVisco)
+                    {
+                        float plasticity = 0.9f;
+                        float yieldSurface = exp(1.0 - plasticity);
+
+                        // Calculate current volume
+                        //float J = svdResult.Sigma.x * svdResult.Sigma.y * svdResult.Sigma.z;  // Changed for 3D
+                        float J = svdResult.Sigma.x * svdResult.Sigma.y;
+
+                        /*svdResult.Sigma = clamp(svdResult.Sigma,
+                            float3(1.0 / yieldSurface, 1.0 / yieldSurface, 1.0 / yieldSurface),
+                            float3(yieldSurface, yieldSurface, yieldSurface));*/
+                        svdResult.Sigma = clamp(svdResult.Sigma,
+                            float2(1.0 / yieldSurface, 1.0 / yieldSurface),
+                            float2(yieldSurface, yieldSurface));
+
+                        //float newJ = svdResult.Sigma.x * svdResult.Sigma.y * svdResult.Sigma.z;
+                        float newJ = svdResult.Sigma.x * svdResult.Sigma.y;
+                        //svdResult.Sigma *= pow(J / newJ, 1.0 / 3.0);  // Changed for 3D: using cube root
+                        svdResult.Sigma *= pow(J / newJ, 1.0 / 2.0);
+
+                        particle.deformationGradient = mul(mul(svdResult.U, diag(svdResult.Sigma)), svdResult.Vt);
+                    }
+                     
+                    else if (particle.material == MaterialSnow) {
+
+                       
+
+                        // Snow, snowCriticalCompression = 0.025, snowCriticalStretch = 0.0075,  snowHardeningCoeff = 10.0
+                        //parameter and method reference based on A material point method for snow simulation
+                        // Alexey Stomakhin, Craig Schroeder, Lawrence Chai, Joseph Teran, Andrew Selle 
+                        //University of California Los Angeles and Walt Disney Animation Studios
+                       //https://media.disneyanimation.com/uploads/production/publication_asset/94/asset/SSCTS13_2.pdf
+
+                        SVDResult svdResult = svd(particle.deformationGradient);
+
+                        // Snow parameters
+                        float criticalCompression = 1.5e-2;
+                        float criticalStretch = 7.5e-3;
+                        float hardeningCoeff = 15.0;
+
+                        // Elastic singular values clamping
+                        float2 elasticSigma = clamp(svdResult.Sigma,
+                            float2(1.0f - criticalCompression, 1.0f - criticalCompression),
+                            float2(1.0f + criticalStretch, 1.0f + criticalStretch));
+
+                        // Compute volume change from elastic part
+                        float Je = elasticSigma.x * elasticSigma.y;
+
+                        // Calculate hardening based on elastic volume change
+                        float hardening = exp(hardeningCoeff * (1.0f - Je));
+
+                        // Reconstruct elastic part Fe
+                        float2x2 Fe = mul(mul(svdResult.U, diag(elasticSigma)), svdResult.Vt);
+
+                        // Update plastic part Fp = F * Fe^(-1)
+                        float2x2 FeInverse = mul(mul(svdResult.U, diag(1.0 / elasticSigma)), svdResult.Vt);
+                        float2x2 Fp = mul(particle.deformationGradient, FeInverse);
+
+                        // Update total deformation gradient F = Fe * Fp
+                        particle.deformationGradient = mul(Fe * hardening, Fp);
+                    }
+                   
+                }
                 
                 // Update particle position
                 particle.position += particle.displacement;
@@ -364,6 +487,122 @@ void main(uint indexInGroup : SV_GroupIndex, uint3 groupId : SV_GroupID)
 
                 float alpha = 0.5 * (1.0 / particle.liquidDensity - tr(particle.deformationDisplacement) - 1.0);
                 particle.deformationDisplacement += g_simConstants.liquidRelaxation * alpha * Identity;
+            }
+            else if (particle.material == MaterialSand)
+            {
+                // Calculate deformation gradient F
+                float2x2 F = mul(Identity + particle.deformationDisplacement, particle.deformationGradient);
+                SVDResult svdResult = svd(F);
+
+                if (particle.logJp == 0)
+                {
+                    svdResult.Sigma = clamp(svdResult.Sigma, float2(1, 1), float2(1000, 1000));
+                }
+                
+                // Calculate closest matrix to F with det == 1
+                float df = det(F);
+                float cdf = clamp(abs(df), 0.1, 1.0);
+                float2x2 Q = mul((1.0 / (sign(df) * sqrt(cdf))), F);
+
+                float2x2 sigmaMat = diag(svdResult.Sigma);
+
+                float elasticityRatio = 0.9f;
+                float alpha = elasticityRatio;
+                float2x2 tgt =  alpha * mul(mul(svdResult.U, sigmaMat), svdResult.Vt) + (1.0 - alpha) * Q;
+
+                // Calculate and apply displacement difference
+                float2x2 invDefGrad = inverse(particle.deformationGradient);
+                float2x2 diff = mul(tgt, invDefGrad) - Identity - particle.deformationDisplacement;
+                particle.deformationDisplacement += elasticityRatio * diff;
+
+                // Apply viscosity
+                float2x2 deviatoric = -1.0 * (particle.deformationDisplacement +
+                    transpose(particle.deformationDisplacement));
+                particle.deformationDisplacement += g_simConstants.liquidViscosity * 0.5 * deviatoric;
+            }
+            else if (particle.material == MaterialElastic || particle.material == MaterialVisco) {
+                // Calculate total deformation gradient
+                float2x2 F = mul(Identity + particle.deformationDisplacement, particle.deformationGradient);
+                SVDResult svdResult = svd(F);
+
+                float elasticRelaxation = 1.5f;
+                float elasticityRatio = 0.1f;
+
+                // Calculate matrix closest to F with determinant = 1 (volume preserving)
+                float df = det(F);
+                float cdf = clamp(abs(df), 0.1, 1000.0);
+                float2x2 Q = mul((1.0 / (sign(df) * sqrt(cdf))), F);
+
+                // Interpolate between rotation (svdResult.U * svdResult.Vt) and 
+                // volume preserving (Q) target shapes
+                float alpha = elasticityRatio;
+                float2x2 rotationPart = mul(svdResult.U, svdResult.Vt);
+                float2x2 targetState = alpha * rotationPart + (1.0 - alpha) * Q;
+
+                // Calculate displacement difference
+                float2x2 invDefGrad = inverse(particle.deformationGradient);
+                float2x2 diff = mul(targetState, invDefGrad) - Identity - particle.deformationDisplacement;
+
+                // Apply relaxation
+                particle.deformationDisplacement += elasticRelaxation * diff;
+            }
+            else if (particle.material == MaterialSnow) {
+
+                float2x2 F = mul(Identity + particle.deformationDisplacement, particle.deformationGradient);
+                SVDResult svdResult = svd(F);
+
+                // Use different parameters for displacement update to avoid overshooting
+                float criticalCompression = 2.5e-2;  // Increased to allow more compression in displacement
+                float criticalStretch = 5.0e-3;      // Reduced to limit stretching
+                float hardeningCoeff = 10.0;         // Reduced to avoid double-hardening
+                float snowViscosity = 0.1f;          // Increased for more stability
+                float repulsionStrength = 0.15f;     // Adjusted for balance
+
+                // Calculate elastic component
+                float2 elasticSigma = clamp(svdResult.Sigma,
+                    float2(1.0f - criticalCompression, 1.0f - criticalCompression),
+                    float2(1.0f + criticalStretch, 1.0f + criticalStretch));
+
+                float Je = elasticSigma.x * elasticSigma.y;
+
+                // Modified hardening - use smaller coefficient since we already applied hardening
+                float hardening = exp(hardeningCoeff * (1.0f - Je) * 0.5);
+
+                // Improved compression handling
+                if (Je < 0.85) { // Increased threshold
+                    // Use quadratic falloff for smoother response
+                    float compressionRatio = (0.85 - Je) / 0.85;
+                    float repulsion = repulsionStrength * compressionRatio * compressionRatio;
+
+                    // Add directional repulsion based on SVD
+                    float2x2 repulsionDir = mul(mul(svdResult.U, Identity), svdResult.Vt);
+                    particle.deformationDisplacement += repulsion * repulsionDir;
+                }
+
+                // Update displacement with modified elastic response
+                float2x2 Fe = mul(mul(svdResult.U, diag(elasticSigma)), svdResult.Vt);
+                float2x2 invF = inverse(F);
+                float2x2 diff = mul(Fe * hardening, invF) - Identity - particle.deformationDisplacement;
+
+                // Apply displacement update with relaxation
+                float relaxationRate = 0.8f;  // Slower update for stability
+                particle.deformationDisplacement += snowViscosity * diff * relaxationRate;
+
+                // Enhanced viscosity handling
+                float2x2 deviatoric = -1.0 * (particle.deformationDisplacement + transpose(particle.deformationDisplacement));
+
+                // Add anisotropic damping
+                float2x2 dampingMatrix = mul(mul(svdResult.U,
+                    float2x2(1.2, 0,    // More damping in compression direction
+                        0, 0.8)),   // Less damping in stretch direction
+                    svdResult.Vt);
+
+                particle.deformationDisplacement += snowViscosity * 0.5 * mul(deviatoric, dampingMatrix);
+
+                // Add velocity damping based on deformation rate
+                float deformationRate = length(particle.displacement);
+                float velocityDamping = saturate(deformationRate * 2.0);
+                particle.displacement *= (1.0 - velocityDamping * snowViscosity);
             }
 
             // P2G

@@ -10,6 +10,7 @@
 #define MaterialElastic 1
 #define MaterialSand 2
 #define MaterialVisco 3
+#define MaterialSnow 4
 
 #define TotalBukkitEdgeLength (BukkitSize + BukkitHaloSize * 2)
 #define TileDataSizePerEdge (TotalBukkitEdgeLength * 4)
@@ -37,6 +38,11 @@ struct PBMPMConstants {
 	unsigned int iteration;
 	unsigned int iterationCount;
 	float borderFriction;
+
+	//plasticity for MaterialVisco, default 0.9, max 1
+	//float Plasticity;
+	
+	
 };
 
 struct Particle {
