@@ -75,20 +75,12 @@ void drawImGUIWindow(PBMPMConstants& pbmpmConstants, ImGuiIO& io) {
     ImGui::SliderFloat("Friction Angle", &pbmpmConstants.frictionAngle, 0.0f, 90.0f);
 
     // Input for unsigned integers (e.g., counts and iterations)
-    ImGui::InputInt2("Grid Size", (int*)&pbmpmConstants.gridSize);
+    ImGui::InputInt3("Grid Size", (int*)&pbmpmConstants.gridSize);
     ImGui::InputInt("Fixed Point Multiplier", (int*)&pbmpmConstants.fixedPointMultiplier);
     ImGui::InputInt("Particles Per Cell Axis", (int*)&pbmpmConstants.particlesPerCellAxis);
 
     ImGui::Checkbox("Use Grid Volume for Liquid", (bool*)&pbmpmConstants.useGridVolumeForLiquid);
 
-    ImGui::InputInt("Shape Count", (int*)&pbmpmConstants.shapeCount);
-
-    ImGui::InputInt("Bukkit Count", (int*)&pbmpmConstants.bukkitCount);
-    ImGui::InputInt("Bukkit Count X", (int*)&pbmpmConstants.bukkitCountX);
-    ImGui::InputInt("Bukkit Count Y", (int*)&pbmpmConstants.bukkitCountY);
-
-    ImGui::InputInt("Iterations", (int*)&pbmpmConstants.iteration);
-    ImGui::InputInt("Iteration Count", (int*)&pbmpmConstants.iterationCount);
     ImGui::SliderFloat("Border Friction", &pbmpmConstants.borderFriction, 0.0f, 1.0f);
 
     // Optional display of FPS and frame info

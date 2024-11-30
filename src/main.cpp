@@ -1,7 +1,5 @@
 #include "main.h"
 
-// Base Object Scene = 0, Bouncing Ball Scene = 1, Mesh Shader Scene = 2, PBMPM Scene = 3, PBD = 4
-
 int main() {
     //set up DX, window, keyboard mouse
     DebugLayer debugLayer = DebugLayer();
@@ -23,19 +21,13 @@ int main() {
     //set mouse to use the window
     mouse->SetWindow(Window::get().getHWND());
 
-
     //initialize scene
     Scene scene{PBMPM, camera.get(), &context};
 
-    PBMPMConstants pbmpmConstants{ {512, 512}, 0.01, 2.5, 1.5, 0.01,
+    PBMPMConstants pbmpmConstants{ {512, 512, 512}, 0.01F, 2.5F, 1.5F, 0.01F,
         (unsigned int)std::ceil(std::pow(10, 7)),
-        1, 4, 30, 0, 0,  0, 0, 0, 0, 5, 0.9 };
+        1, 4, 30, 0, 0, 0, 0, 0, 0, 5, 0.9F };
     PBMPMConstants pbmpmTempConstants = pbmpmConstants;
-
-   
-
-
-
 
     while (!Window::get().getShouldClose()) {
         //update window
@@ -46,6 +38,7 @@ int main() {
             Window::get().resize();
             camera->updateAspect((float)Window::get().getWidth() / (float)Window::get().getHeight());
         }
+
         //check keyboard state
         auto kState = keyboard->GetState();
         if (kState.W) {
@@ -73,23 +66,19 @@ int main() {
             scene.setRenderScene(PBMPM);
         }
         if (kState.D3) {
-            scene.setRenderScene(Physics);
+            scene.setRenderScene(Fluid);
         }
-        if (kState.D4) {
-            scene.setRenderScene(PBD);
-        }
-
 
         //check mouse state
         auto mState = mouse->GetState();
 
-        if (mState.positionMode == Mouse::MODE_RELATIVE && kState.LeftControl) {
+        mouse->SetMode(mState.leftButton ? Mouse::MODE_RELATIVE : Mouse::MODE_ABSOLUTE);
+
+        if (mState.positionMode == Mouse::MODE_RELATIVE && kState.LeftShift) {
             camera->rotateOnX(-mState.y * 0.01f);
             camera->rotateOnY(mState.x * 0.01f);
             camera->rotate();
         }
-
-        mouse->SetMode(mState.leftButton ? Mouse::MODE_RELATIVE : Mouse::MODE_ABSOLUTE);
 
         //update camera
         camera->updateViewMat();
@@ -132,8 +121,6 @@ int main() {
         Window::get().present();
 		context.resetCommandList(renderPipeline->getCommandListID());
     }
-
-    // Close
 
     // Scene should release all resources, including their pipelines
     scene.releaseResources();

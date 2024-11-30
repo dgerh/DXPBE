@@ -25,9 +25,9 @@ void ObjectScene::constructScene()
     for (int i = 0; i < inputStrings.size(); i++) {
         auto string = inputStrings.at(i);
         auto m = modelMatrices.at(i);
-		Mesh newMesh = Mesh((std::filesystem::current_path() / string).string(), context, renderPipeline->getCommandList(), renderPipeline, m);
+		/*Mesh newMesh = Mesh((std::filesystem::current_path() / string).string(), context, renderPipeline->getCommandList(), renderPipeline, m);
 		meshes.push_back(newMesh);
-		sceneSize += newMesh.getNumTriangles();
+		sceneSize += newMesh.getNumTriangles();*/
 	}
 }
 

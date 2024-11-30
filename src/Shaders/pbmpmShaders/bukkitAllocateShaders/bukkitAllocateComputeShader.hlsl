@@ -13,17 +13,17 @@ RWStructuredBuffer<BukkitThreadData> g_bukkitThreadData : register(u0);
 RWStructuredBuffer<uint> g_bukkitIndexStart : register(u2);
 
 // Compute Shader Entry Point
-[numthreads(GridDispatchSize, GridDispatchSize, 1)]
+[numthreads(GridDispatchSize, GridDispatchSize, GridDispatchSize)]
 void main(uint3 id : SV_DispatchThreadID)
 {
     // Ensure the current invocation is within bounds
-    if (id.x >= g_simConstants.bukkitCountX || id.y >= g_simConstants.bukkitCountY)
+    if (id.x >= g_simConstants.bukkitCountX || id.y >= g_simConstants.bukkitCountY || id.z >= g_simConstants.bukkitCountZ)
     {
         return;
     }
 
     // Compute the bukkit index
-    uint bukkitIndex = bukkitAddressToIndex(uint2(id.xy), g_simConstants.bukkitCountX);
+    uint bukkitIndex = bukkitAddressToIndex(uint3(id.xyz), g_simConstants.bukkitCountX, g_simConstants.bukkitCountY);
 
     // Get the particle count for the current bukkit
     uint bukkitCount = g_bukkitCounts[bukkitIndex];
@@ -60,7 +60,7 @@ void main(uint3 id : SV_DispatchThreadID)
         }
 
         // Write the thread data
-        BukkitThreadData data = {particleStartIndex + i * ParticleDispatchSize, groupCount, id.x, id.y};
+        BukkitThreadData data = {particleStartIndex + i * ParticleDispatchSize, groupCount, id.x, id.y, id.z};
         g_bukkitThreadData[i + dispatchStartIndex] = data;
         
     }

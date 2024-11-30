@@ -9,12 +9,6 @@ Scene::Scene(RenderScene p_scene, Camera* p_camera, DXContext* context)
 		D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE),
 	pbmpmIC(50),
 	pbmpmScene(context, &pbmpmRP, pbmpmIC),
-	physicsRP("PhysicsVertexShader.cso", "PixelShader.cso", "PhysicsRootSignature.cso", *context, CommandListID::PHYSICS_RENDER_ID,
-		D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE),
-	physicsCP("TestComputeRootSignature.cso", "TestComputeShader.cso", *context, CommandListID::PHYSICS_COMPUTE_ID,
-		D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 2, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE),
-	physicsIC(10),
-	physicsScene(context, &physicsRP, &physicsCP, physicsIC),
 	fluidRP("VertexShader.cso", "PixelShader.cso", "RootSignature.cso", *context, CommandListID::BILEVEL_UNIFORM_GRID_COMPUTE_ID,
 		D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE),
 	bilevelUniformGridCP("BilevelUniformGridRootSig.cso", "BilevelUniformGrid.cso", *context, CommandListID::BILEVEL_UNIFORM_GRID_COMPUTE_ID,
@@ -32,12 +26,6 @@ Scene::Scene(RenderScene p_scene, Camera* p_camera, DXContext* context)
 	fluidMeshPipeline("FluidMeshShader.cso", "PixelShader.cso", "FluidMeshRootSig.cso", *context, CommandListID::FLUID_MESH_ID,
 		D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE),
 	fluidScene(context, &fluidRP, &bilevelUniformGridCP, &surfaceBlockDetectionCP, &surfaceCellDetectionCP, &surfaceVertexCompactionCP, &surfaceVertexDensityCP, &surfaceVertexNormalCP, &fluidMeshPipeline),
-
-	pbdRP("PhysicsVertexShader.cso", "PixelShader.cso", "PhysicsRootSignature.cso", *context, CommandListID::PBD_Render_ID,
-		D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE),
-	pbdIC(24),
-	pbdScene(context, &pbdRP, pbdIC),
-	
 	currentRP(),
 	currentCP()
 {
@@ -57,20 +45,11 @@ void Scene::setRenderScene(RenderScene renderScene) {
 		currentRP = &pbmpmRP;
 		//currentCP = &pbmpmCP;
 		break;
-	case Physics:
-		currentRP = &physicsRP;
-		currentCP = &physicsCP;
-		break;
 	case Fluid:
 		currentRP = &fluidRP;
 		currentCP = &bilevelUniformGridCP;
 		break;
-	case PBD:
-		currentRP = &pbdRP;
-		//currentCP = &bilevelUniformGridCP;
-		break;
 	case Object:
-	default:
 		currentRP = &objectRP;
 		currentCP = nullptr;
 		break;
@@ -82,15 +61,10 @@ void Scene::compute() {
 	case PBMPM:
 		pbmpmScene.compute();
 		break;
-	case Physics:
-		physicsScene.compute();
-		break;
 	case Fluid:
 		fluidScene.compute();
 		break;
-	case PBD:
-		pbdScene.compute();
-		break;
+	case Object:
 	default:
 		break;
 	}
@@ -98,17 +72,11 @@ void Scene::compute() {
 
 void Scene::draw() {
 	switch (scene) {
-	case Physics:
-		physicsScene.draw(camera);
-		break;
 	case PBMPM:
 		pbmpmScene.draw(camera);
 		break;
 	case Fluid:
 		fluidScene.draw(camera);
-		break;
-	case PBD:
-		pbdScene.draw(camera);
 		break;
 	default:
 	case Object:
@@ -120,9 +88,7 @@ void Scene::draw() {
 void Scene::releaseResources() {
 	objectScene.releaseResources();
 	pbmpmScene.releaseResources();
-	physicsScene.releaseResources();
 	fluidScene.releaseResources();
-	pbdScene.releaseResources();
 }
 
 void Scene::updatePBMPMConstants(PBMPMConstants& newConstants) {
