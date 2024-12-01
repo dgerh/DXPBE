@@ -1,10 +1,6 @@
 #include "BilevelUniformGridRootSig.hlsl"
+#include "utils.hlsl"
 #include "../constants.h"
-
-struct Cell {
-    int particleCount;
-    int particleIndices[MAX_PARTICLES_PER_CELL];
-};
 
 struct Block {
     int nonEmptyCellCount;
@@ -19,12 +15,12 @@ RWStructuredBuffer<Block> blocks : register(u1);
 
 ConstantBuffer<BilevelUniformGridConstants> cb : register(b0);
 
-uint3 getCellIndex(float3 particlePosition) {
+int3 getCellIndex(float3 particlePosition) {
     int cellIdxX = floor((particlePosition.x - cb.minBounds.x) / cb.resolution);
     int cellIdxY = floor((particlePosition.y - cb.minBounds.y) / cb.resolution);
     int cellIdxZ = floor((particlePosition.z - cb.minBounds.z) / cb.resolution);
 
-    return uint3(cellIdxX, cellIdxY, cellIdxZ);
+    return int3(cellIdxX, cellIdxY, cellIdxZ);
 }
 
 // NOTE: if this compute shader changes to 3D, the logic also needs to change to get and use the particle index correctly.
@@ -36,7 +32,7 @@ void main(uint3 globalThreadId : SV_DispatchThreadID) {
 
     float3 position = positionsBuffer[globalThreadId.x];
     int3 cellIndices = getCellIndex(position);
-    int cellIndex1D = cellIndices.x + (cellIndices.y * cb.dimensions.x) + (cellIndices.z * cb.dimensions.x * cb.dimensions.y);
+    int cellIndex1D = to1D(cellIndices, cb.dimensions);
     int3 blockIndices = cellIndices / CELLS_PER_BLOCK_EDGE;
     int3 localCellIndices = cellIndices - (blockIndices * CELLS_PER_BLOCK_EDGE); // could be done with modulo, but this is faster since we already have blockIndices
 
@@ -70,9 +66,7 @@ void main(uint3 globalThreadId : SV_DispatchThreadID) {
                         continue;
                     }
 
-                    uint neighborBlockIndex1D = neighborBlockIndices.x 
-                                              + neighborBlockIndices.y * gridBlockDimensions.x
-                                              + neighborBlockIndices.z * gridBlockDimensions.x * gridBlockDimensions.y;
+                    int neighborBlockIndex1D = to1D(neighborBlockIndices, gridBlockDimensions);
 
                     // TODO: test if its faster to atomic add first to a shared memory variable, then add to the buffer at the end
                     InterlockedAdd(blocks[neighborBlockIndex1D].nonEmptyCellCount, 1);

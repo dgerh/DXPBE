@@ -7,15 +7,15 @@
 #include "../Shaders/constants.h"
 
 struct GridConstants {
-    unsigned int numParticles;
-    XMUINT3 gridDim;
+    int numParticles;
+    XMINT3 gridDim;
     XMFLOAT3 minBounds;
     float resolution;
 };
 
 struct MeshShadingConstants {
     XMMATRIX viewProj;
-    XMUINT3 dimensions;
+    XMINT3 dimensions;
     float resolution;
     XMFLOAT3 minBounds;
 };
@@ -54,7 +54,8 @@ public:
     void releaseResources();
 
 private:
-    void transitionBuffersToUAV(ID3D12GraphicsCommandList6* cmdList, D3D12_RESOURCE_STATES state);
+    void transitionBuffers(ID3D12GraphicsCommandList6* cmdList, D3D12_RESOURCE_STATES beforeState, D3D12_RESOURCE_STATES afterState);
+    void resetBuffers(ID3D12GraphicsCommandList6* cmdList);
 
     GridConstants gridConstants;
     
@@ -85,4 +86,10 @@ private:
     StructuredBuffer surfaceVertDensityDispatch;
     StructuredBuffer surfaceVertDensityBuffer;
     StructuredBuffer surfaceVertexNormalBuffer;
+
+    StructuredBuffer blankCellsBuffer;
+    StructuredBuffer blankBlocksBuffer;
+    StructuredBuffer blankSurfaceVerticesBuffer;
+    StructuredBuffer blankSurfaceVertDensityBuffer;
+    StructuredBuffer blankSurfaceVertexNormalBuffer;
 };

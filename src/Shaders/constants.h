@@ -3,23 +3,7 @@
 static const float PI = 3.1415926f;
 
 /* ================== Constants for the mesh shading pipeline ================== */ 
-// This is just for shaders, types will not compile in C++ code
-#ifndef __cplusplus
-struct BilevelUniformGridConstants {
-    int numParticles;
-    uint3 dimensions;
-    float3 minBounds;
-    float resolution;
-};
 
-struct MeshShadingConstants {
-    float4x4 viewProj;
-    uint3 dimensions;
-    float resolution;
-    float3 minBounds;
-};
-
-#endif
 static const int MAX_PARTICLES_PER_CELL = 8;
 // This really should not be changed. Mesh shaders have very hard limits on how many verts and primitives they can output.
 // If this is made any bigger, the mesh shader will have vertex overflow.
@@ -45,3 +29,25 @@ static const float EPSILON = 0.00001f;
 static const int MAX_PRIMITIVES = 128;
 static const int MAX_VERTICES = 170;
 static const int EDGES_PER_HALFBLOCK = 170; // equal to max verts; just giving it a new name for clarity
+
+// This is just for shaders, types will not compile in C++ code
+#ifndef __cplusplus
+struct Cell {
+    int particleCount;
+    int particleIndices[MAX_PARTICLES_PER_CELL];
+};
+
+struct BilevelUniformGridConstants {
+    int numParticles;
+    int3 dimensions;
+    float3 minBounds;
+    float resolution;
+};
+
+struct MeshShadingConstants {
+    float4x4 viewProj;
+    int3 dimensions;
+    float resolution;
+    float3 minBounds;
+};
+#endif

@@ -6,9 +6,9 @@
 // SRV for the surface vertex density buffer
 StructuredBuffer<float> surfaceVertexDensities : register(t0);
 // SRV for the surface vertex indices
-StructuredBuffer<uint> surfaceVertexIndices : register(t1);
+StructuredBuffer<int> surfaceVertexIndices : register(t1);
 // Root SRV for dispatch params for this pass
-StructuredBuffer<uint3> surfaceVertDensityDispatch : register(t2);
+StructuredBuffer<int3> surfaceVertDensityDispatch : register(t2);
 // Root constants
 ConstantBuffer<BilevelUniformGridConstants> cb : register(b0);
 
@@ -26,21 +26,22 @@ void main(uint3 globalThreadId : SV_DispatchThreadID) {
         return;
     }
 
-    uint globalSurfaceVertIndex1d = surfaceVertexIndices[globalThreadId.x];
-    uint3 globalSurfaceVertIndex3d = to3D(globalSurfaceVertIndex1d, (CELLS_PER_BLOCK_EDGE + 1) * uint3(1, 1, 1));
+    int globalSurfaceVertIndex1d = surfaceVertexIndices[globalThreadId.x];
+    int3 globalSurfaceVertIndex3d = to3D(globalSurfaceVertIndex1d, cb.dimensions + 1);
 
     float3 normal;
-    normal.x = surfaceVertexDensities[to1D(globalSurfaceVertIndex3d + uint3(1, 0, 0), (CELLS_PER_BLOCK_EDGE + 1) * uint3(1, 1, 1))]
-                - surfaceVertexDensities[to1D(globalSurfaceVertIndex3d - uint3(1, 0, 0), (CELLS_PER_BLOCK_EDGE + 1) * uint3(1, 1, 1))];
+    normal.x = surfaceVertexDensities[to1D(globalSurfaceVertIndex3d + int3(1, 0, 0), cb.dimensions + 1)]
+                - surfaceVertexDensities[to1D(globalSurfaceVertIndex3d - int3(1, 0, 0), cb.dimensions + 1)];
 
-    normal.y = surfaceVertexDensities[to1D(globalSurfaceVertIndex3d + uint3(0, 1, 0), (CELLS_PER_BLOCK_EDGE + 1) * uint3(1, 1, 1))]
-                - surfaceVertexDensities[to1D(globalSurfaceVertIndex3d - uint3(0, 1, 0), (CELLS_PER_BLOCK_EDGE + 1) * uint3(1, 1, 1))];
+    normal.y = surfaceVertexDensities[to1D(globalSurfaceVertIndex3d + int3(0, 1, 0), cb.dimensions + 1)]
+                - surfaceVertexDensities[to1D(globalSurfaceVertIndex3d - int3(0, 1, 0), cb.dimensions + 1)];
     
-    normal.z = surfaceVertexDensities[to1D(globalSurfaceVertIndex3d + uint3(0, 0, 1), (CELLS_PER_BLOCK_EDGE + 1) * uint3(1, 1, 1))]
-                - surfaceVertexDensities[to1D(globalSurfaceVertIndex3d - uint3(0, 0, 1), (CELLS_PER_BLOCK_EDGE + 1) * uint3(1, 1, 1))];
+    normal.z = surfaceVertexDensities[to1D(globalSurfaceVertIndex3d + int3(0, 0, 1), cb.dimensions + 1)]
+                - surfaceVertexDensities[to1D(globalSurfaceVertIndex3d - int3(0, 0, 1), cb.dimensions + 1)];
 
-    normal /= cb.resolution;
+    normal /= cb.resolution; // Even though this doesn't affect the direction of the normal, it's necessary for numerical stability, when normal components are close to zero.
     normal = normalize(normal);
 
+    // Like densities buffer, not compressed, but the only populated entries are for surface vertices.
     surfaceVertexNormals[globalSurfaceVertIndex1d] = float2(normal.x, normal.y);
 }

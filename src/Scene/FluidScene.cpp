@@ -77,7 +77,9 @@ void FluidScene::draw(Camera* camera) {
     // Draws
     cmdList->ExecuteIndirect(meshCommandSignature, 1, surfaceHalfBlockDispatch.getBuffer(), 0, nullptr, 0);
 
-    transitionBuffersToUAV(cmdList, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE|D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    transitionBuffers(cmdList, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE|D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_COPY_DEST);
+    resetBuffers(cmdList);
+    transitionBuffers(cmdList, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
     context->executeCommandList(fluidMeshPipeline->getCommandListID());
     context->signalAndWaitForFence(fence, fenceValue);
@@ -90,26 +92,29 @@ float getRandomFloatInRange(float min, float max) {
 }
 
 void FluidScene::constructScene() {
-    unsigned int blocksPerEdge = 3;
-    unsigned int numParticles = blocksPerEdge * CELLS_PER_BLOCK_EDGE * blocksPerEdge * CELLS_PER_BLOCK_EDGE * blocksPerEdge * CELLS_PER_BLOCK_EDGE;
-    numParticles -= blocksPerEdge * CELLS_PER_BLOCK_EDGE * blocksPerEdge * CELLS_PER_BLOCK_EDGE; // Skip the top level of cells
+    int blocksPerEdge = 3;
+    int numParticlesPerCell = 16;
+    int numParticles = numParticlesPerCell * blocksPerEdge * CELLS_PER_BLOCK_EDGE * blocksPerEdge * CELLS_PER_BLOCK_EDGE * blocksPerEdge * CELLS_PER_BLOCK_EDGE;
+    numParticles -= numParticlesPerCell * blocksPerEdge * CELLS_PER_BLOCK_EDGE * blocksPerEdge * CELLS_PER_BLOCK_EDGE; // Skip the top level of cells
     gridConstants = { numParticles, {blocksPerEdge * CELLS_PER_BLOCK_EDGE, blocksPerEdge * CELLS_PER_BLOCK_EDGE, blocksPerEdge * CELLS_PER_BLOCK_EDGE}, {0.f, 0.f, 0.f}, 0.1f };
 
     // Populate position data. Place a particle per-cell in a 12x12x12 block of cells, each at a random position in a cell.
     // (Temporary, eventually, position data will come from simulation)
-    for (unsigned int i = 0; i < gridConstants.gridDim.x; ++i) {
-        for (unsigned int j = 0; j < gridConstants.gridDim.y; ++j) {
-            for (unsigned int k = 0; k < gridConstants.gridDim.z; ++k) {
-                // SKip i,j,k = top level of cells, that way the top level is empty and the second-to-top level becomes the "surface"
-                if (k == gridConstants.gridDim.z - 1) {
-                    continue;
-                }
+    for (int u = 0; u < numParticlesPerCell; ++u) {
+        for (int i = 0; i < gridConstants.gridDim.x; ++i) {
+            for (int j = 0; j < gridConstants.gridDim.y; ++j) {
+                for (int k = 0; k < gridConstants.gridDim.z; ++k) {
+                    // SKip i,j,k = top level of cells, that way the top level is empty and the second-to-top level becomes the "surface"
+                    if (k == gridConstants.gridDim.z - 1) {
+                        continue;
+                    }
 
-                positions.push_back({ 
-                    gridConstants.minBounds.x + gridConstants.resolution * i + getRandomFloatInRange(0.f, gridConstants.resolution),
-                    gridConstants.minBounds.y + gridConstants.resolution * j + getRandomFloatInRange(0.f, gridConstants.resolution),
-                    gridConstants.minBounds.z + gridConstants.resolution * k + getRandomFloatInRange(0.f, gridConstants.resolution) 
-                });
+                    positions.push_back({ 
+                        gridConstants.minBounds.x + gridConstants.resolution * i + getRandomFloatInRange(0.f, gridConstants.resolution),
+                        gridConstants.minBounds.y + gridConstants.resolution * j + getRandomFloatInRange(0.f, gridConstants.resolution),
+                        gridConstants.minBounds.z + gridConstants.resolution * k + getRandomFloatInRange(0.f, gridConstants.resolution) 
+                    });
+                }
             }
         }
     }
@@ -125,10 +130,10 @@ void FluidScene::constructScene() {
     
     std::vector<Cell> cells(numCells);
     std::vector<Block> blocks(numBlocks);
-    std::vector<unsigned int> surfaceBlockIndices(numBlocks, 0);
+    std::vector<int> surfaceBlockIndices(numBlocks, 0);
     XMUINT3 dipatchCPU = { 0, 1, 1 };
-    std::vector<unsigned int> surfaceVertices(numVerts, 0);
-    std::vector<unsigned int> surfaceVertexIndices(numVerts, 0);
+    std::vector<int> surfaceVertices(numVerts, 0);
+    std::vector<int> surfaceVertexIndices(numVerts, 0);
     std::vector<float> surfaceVertexDensities(numVerts, 0.f);
     std::vector<XMFLOAT2> surfaceVertexNormals(numVerts, { 0.f, 0.f }); // (x, y) components of the normal; z component can be inferred. This helps save space.
 
@@ -183,6 +188,22 @@ void FluidScene::constructScene() {
     surfaceVertexNormalBuffer.createUAV(*context, bilevelUniformGridCP->getDescriptorHeap()); 
     surfaceVertexNormalBuffer.createSRV(*context, bilevelUniformGridCP->getDescriptorHeap());
     
+    // Blank buffers (for resetting their non-blank counterparts)
+    blankCellsBuffer = StructuredBuffer(cells.data(), numCells, sizeof(Cell));
+    blankCellsBuffer.passDataToGPU(*context, bilevelUniformGridCP->getCommandList(), bilevelUniformGridCP->getCommandListID());
+
+    blankBlocksBuffer = StructuredBuffer(blocks.data(), numBlocks, sizeof(Block));
+    blankBlocksBuffer.passDataToGPU(*context, bilevelUniformGridCP->getCommandList(), bilevelUniformGridCP->getCommandListID());
+
+    blankSurfaceVerticesBuffer = StructuredBuffer(surfaceVertices.data(), numVerts, sizeof(unsigned int));
+    blankSurfaceVerticesBuffer.passDataToGPU(*context, bilevelUniformGridCP->getCommandList(), bilevelUniformGridCP->getCommandListID());
+
+    blankSurfaceVertDensityBuffer = StructuredBuffer(surfaceVertexDensities.data(), numVerts, sizeof(float));
+    blankSurfaceVertDensityBuffer.passDataToGPU(*context, bilevelUniformGridCP->getCommandList(), bilevelUniformGridCP->getCommandListID());
+
+    blankSurfaceVertexNormalBuffer = StructuredBuffer(surfaceVertexNormals.data(), numVerts, sizeof(XMFLOAT2));
+    blankSurfaceVertexNormalBuffer.passDataToGPU(*context, bilevelUniformGridCP->getCommandList(), bilevelUniformGridCP->getCommandListID());
+
 	// Create Command Signature
 	// Describe the arguments for an indirect dispatch
 	D3D12_INDIRECT_ARGUMENT_DESC argumentDesc = {};
@@ -212,15 +233,13 @@ void FluidScene::constructScene() {
     context->getDevice()->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence));
 
     // Transition all resources to UAVs to start
-    transitionBuffersToUAV(bilevelUniformGridCP->getCommandList(), D3D12_RESOURCE_STATE_COPY_DEST);
+    transitionBuffers(bilevelUniformGridCP->getCommandList(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
     context->executeCommandList(bilevelUniformGridCP->getCommandListID());
     context->signalAndWaitForFence(fence, fenceValue);
     context->resetCommandList(bilevelUniformGridCP->getCommandListID());
 }
 
 void FluidScene::compute() {
-    // TODO: do a reset compute pass first to clear the buffers (take advantage of existing passes where possible)
-    // (This is a todo, because I need to implement a third compute pass that operates on the cell level to clear the cell buffers)
     computeBilevelUniformGrid();
     computeSurfaceBlockDetection();
     computeSurfaceCellDetection();
@@ -450,7 +469,7 @@ void FluidScene::computeSurfaceVertexDensity() {
     cmdList->SetComputeRootShaderResourceView(3, surfaceVertDensityDispatch.getGPUVirtualAddress());
     cmdList->SetComputeRootUnorderedAccessView(4, surfaceBlockDispatch.getGPUVirtualAddress());
     cmdList->SetComputeRootDescriptorTable(5, surfaceVertDensityBuffer.getUAVGPUDescriptorHandle());
-    cmdList->SetComputeRoot32BitConstants(6, 1, &gridConstants, 0);
+    cmdList->SetComputeRoot32BitConstants(6, 8, &gridConstants, 0);
 
 
     // Transition surfaceVertDensityDispatch to indirect argument buffer
@@ -503,7 +522,7 @@ void FluidScene::computeSurfaceVertexNormal() {
     cmdList->SetComputeRootDescriptorTable(1, surfaceVertexIndicesBuffer.getSRVGPUDescriptorHandle());
     cmdList->SetComputeRootShaderResourceView(2, surfaceVertDensityDispatch.getGPUVirtualAddress());
     cmdList->SetComputeRootDescriptorTable(3, surfaceVertexNormalBuffer.getUAVGPUDescriptorHandle());
-    cmdList->SetComputeRoot32BitConstants(4, 1, &gridConstants, 0);
+    cmdList->SetComputeRoot32BitConstants(4, 8, &gridConstants, 0);
 
     // Transition surfaceVertDensityDispatch to indirect argument buffer
     D3D12_RESOURCE_BARRIER surfaceVertDensityDispatchBarrier2 = CD3DX12_RESOURCE_BARRIER::Transition(
@@ -541,74 +560,65 @@ void FluidScene::releaseResources() {
     surfaceVertexNormalBuffer.releaseResources();
 }
 
-void FluidScene::transitionBuffersToUAV(ID3D12GraphicsCommandList6* cmdList, D3D12_RESOURCE_STATES beforeState) {
-    // Transition everything back to what it needs to be for the next frame
-    // Cells buffer to UAV
+void FluidScene::transitionBuffers(ID3D12GraphicsCommandList6* cmdList, D3D12_RESOURCE_STATES beforeState, D3D12_RESOURCE_STATES afterState) {
     D3D12_RESOURCE_BARRIER cellsBufferBarrier = CD3DX12_RESOURCE_BARRIER::Transition(
         cellsBuffer.getBuffer(),
         beforeState,
-        D3D12_RESOURCE_STATE_UNORDERED_ACCESS
+        afterState
     );
 
-    // Blocks buffer to UAV
     D3D12_RESOURCE_BARRIER blocksBufferBarrier = CD3DX12_RESOURCE_BARRIER::Transition(
         blocksBuffer.getBuffer(),
         beforeState,
-        D3D12_RESOURCE_STATE_UNORDERED_ACCESS
+        afterState
     );
     
-    // Surface block indices buffer to UAV
     D3D12_RESOURCE_BARRIER surfaceBlockIndicesBufferBarrier = CD3DX12_RESOURCE_BARRIER::Transition(
         surfaceBlockIndicesBuffer.getBuffer(),
         beforeState,
-        D3D12_RESOURCE_STATE_UNORDERED_ACCESS
+        afterState
     );
 
-    // Surface vertices buffer to UAV
     D3D12_RESOURCE_BARRIER surfaceVerticesBufferBarrier = CD3DX12_RESOURCE_BARRIER::Transition(
         surfaceVerticesBuffer.getBuffer(),
         beforeState,
-        D3D12_RESOURCE_STATE_UNORDERED_ACCESS
+        afterState
     );
 
-    // Surface vertex indices buffer to UAV
     D3D12_RESOURCE_BARRIER surfaceVertexIndicesBufferBarrier = CD3DX12_RESOURCE_BARRIER::Transition(
         surfaceVertexIndicesBuffer.getBuffer(),
         beforeState,
-        D3D12_RESOURCE_STATE_UNORDERED_ACCESS
+        afterState
     );
 
-    // Surface vertex density buffer to UAV
     D3D12_RESOURCE_BARRIER surfaceVertDensityBufferBarrier = CD3DX12_RESOURCE_BARRIER::Transition(
         surfaceVertDensityBuffer.getBuffer(),
         beforeState,
-        D3D12_RESOURCE_STATE_UNORDERED_ACCESS
+        afterState
     );
 
-    // Surface vertex normal buffer to UAV
     D3D12_RESOURCE_BARRIER surfaceVertexNormalBufferBarrier2 = CD3DX12_RESOURCE_BARRIER::Transition(
         surfaceVertexNormalBuffer.getBuffer(),
         beforeState,
-        D3D12_RESOURCE_STATE_UNORDERED_ACCESS
+        afterState
     );
 
-    // Dispatch buffers back to UAVs
     D3D12_RESOURCE_BARRIER surfaceBlockDispatchBarrier = CD3DX12_RESOURCE_BARRIER::Transition(
         surfaceBlockDispatch.getBuffer(),
         beforeState,
-        D3D12_RESOURCE_STATE_UNORDERED_ACCESS
+        afterState
     );
 
     D3D12_RESOURCE_BARRIER surfaceHalfBlockDispatchBarrier = CD3DX12_RESOURCE_BARRIER::Transition(
         surfaceHalfBlockDispatch.getBuffer(),
         beforeState,
-        D3D12_RESOURCE_STATE_UNORDERED_ACCESS
+        afterState
     );
 
     D3D12_RESOURCE_BARRIER surfaceVertDensityDispatchBarrier = CD3DX12_RESOURCE_BARRIER::Transition(
         surfaceVertDensityDispatch.getBuffer(),
         beforeState,
-        D3D12_RESOURCE_STATE_UNORDERED_ACCESS
+        afterState
     );
 
     D3D12_RESOURCE_BARRIER barriers[10] = { 
@@ -625,4 +635,14 @@ void FluidScene::transitionBuffersToUAV(ID3D12GraphicsCommandList6* cmdList, D3D
     };
 
     cmdList->ResourceBarrier(10, barriers);
+}
+
+// This is a GPU->GPU copy, so it's fast, but it requires allocating extra memory for the blank buffers.
+// We could also use a compute shader to reset the buffers in the future.
+void FluidScene::resetBuffers(ID3D12GraphicsCommandList6* cmdList) {
+    cmdList->CopyBufferRegion(cellsBuffer.getBuffer(), 0, blankCellsBuffer.getBuffer(), 0, blankCellsBuffer.getElementSize() * blankCellsBuffer.getNumElements());
+    cmdList->CopyBufferRegion(blocksBuffer.getBuffer(), 0, blankBlocksBuffer.getBuffer(), 0, blankBlocksBuffer.getElementSize() * blankBlocksBuffer.getNumElements());
+    cmdList->CopyBufferRegion(surfaceVerticesBuffer.getBuffer(), 0, blankSurfaceVerticesBuffer.getBuffer(), 0, blankSurfaceVerticesBuffer.getElementSize() * blankSurfaceVerticesBuffer.getNumElements());
+    cmdList->CopyBufferRegion(surfaceVertexIndicesBuffer.getBuffer(), 0, blankSurfaceVerticesBuffer.getBuffer(), 0, blankSurfaceVerticesBuffer.getElementSize() * blankSurfaceVerticesBuffer.getNumElements());
+    cmdList->CopyBufferRegion(surfaceVertDensityBuffer.getBuffer(), 0, blankSurfaceVertDensityBuffer.getBuffer(), 0, blankSurfaceVertDensityBuffer.getElementSize() * blankSurfaceVertDensityBuffer.getNumElements());
 }

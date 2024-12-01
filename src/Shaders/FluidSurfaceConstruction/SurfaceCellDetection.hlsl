@@ -7,11 +7,6 @@ struct Uniforms {
     int3 gridCellDimensions;
 };
 
-struct Cell {
-    int particleCount;
-    int particleIndices[MAX_PARTICLES_PER_CELL];
-};
-
 // Inputs
 // Constant buffer (root constant)
 ConstantBuffer<Uniforms> cb : register(b0);
@@ -99,9 +94,6 @@ void main(uint3 globalThreadId : SV_DispatchThreadID, uint3 localThreadId : SV_G
     int3 localCellIndex3d = to3D(localThreadId.x, CELLS_PER_BLOCK_EDGE * int3(1, 1, 1));
     int3 globalCellIndex3d = surfaceBlockIdx3d * CELLS_PER_BLOCK_EDGE + localCellIndex3d;
 
-    // A quick aside: using the globalCellIndex3d, reset the surface vertices buffer (from last frame) to 0
-    setGlobalSurfaceVertsToValue(globalCellIndex3d, cb.gridCellDimensions + 1, 0);
-
     // Prefetch and store the particle count for this cell. Since shared memory will store (N + 2)^3 cells, not just N^3 cells, in order for all cells to be contiguous,
     // we need to offset the surface block cells themselves by 1 to leave room for the extra-surface cells.
     // (Skip the cells on edges, we'll get them later)
@@ -175,7 +167,8 @@ void main(uint3 globalThreadId : SV_DispatchThreadID, uint3 localThreadId : SV_G
     }
 
     // Initialize the shared memory to all 0s, then only write to it if isSurfaceCell.
-    // We write to shared memory first because cells can share vertices, so this saves on duplicate global writes.
+    // We write to shared memory first because cells can share vertices, and may not agree on what's a surface vertex,
+    // so this saves on redundant global writes/overwrites (and the need for atomics).
     setSharedMemSurfaceVerts(localCellIndex3d, (CELLS_PER_BLOCK_EDGE + 1) * int3(1, 1, 1), 0);
     GroupMemoryBarrierWithGroupSync();
 
