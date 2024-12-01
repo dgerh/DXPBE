@@ -343,7 +343,7 @@ void PBMPMScene::constructScene() {
 		(unsigned int)std::ceil(std::pow(10, 7)),
 		1, 4, 30, 0, 0,  0, 0, 0, 0, 0, 5, 0.9 };
 
-	float radius = 0.002;
+	float radius = 0.005;
 	float spacing = radius * 2.1;
 
 	int particlesPerRow = (int)sqrt(instanceCount);
@@ -361,6 +361,7 @@ void PBMPMScene::constructScene() {
 		particles[i] = {position, 1.0, {0.f, 0.f, 0.f}, density * volume, 0, volume, 0.0, 1.0, 1.0,
 						{ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0 },
 						{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 } };
+
 	}
 
 	particleBuffer = StructuredBuffer(particles.data(), particles.size(), sizeof(PBMPMParticle));
@@ -564,6 +565,7 @@ void PBMPMScene::compute() {
 }
 
 void PBMPMScene::draw(Camera* cam) {
+
 	auto cmdList = renderPipeline->getCommandList();
 
 	// IA
