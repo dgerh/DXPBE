@@ -459,7 +459,7 @@ void main(uint indexInGroup : SV_GroupIndex, uint3 groupId : SV_GroupID)
                 // Update particle volume
                 
                 volume = 1.0 / volume;
-                if (volume < 1)
+                if (volume < 1.0)
                 {
                     particle.liquidDensity = lerp(particle.liquidDensity, volume, 0.1);
                 }
