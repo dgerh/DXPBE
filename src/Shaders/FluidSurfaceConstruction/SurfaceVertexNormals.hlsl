@@ -27,17 +27,17 @@ void main(uint3 globalThreadId : SV_DispatchThreadID) {
     }
 
     int globalSurfaceVertIndex1d = surfaceVertexIndices[globalThreadId.x];
-    int3 globalSurfaceVertIndex3d = to3D(globalSurfaceVertIndex1d, cb.dimensions + 1);
+    int3 globalSurfaceVertIndex3d = to3D(globalSurfaceVertIndex1d, cb.dimensions + int3(1, 1, 1));
 
     float3 normal;
-    normal.x = surfaceVertexDensities[to1D(globalSurfaceVertIndex3d + int3(1, 0, 0), cb.dimensions + 1)]
-                - surfaceVertexDensities[to1D(globalSurfaceVertIndex3d - int3(1, 0, 0), cb.dimensions + 1)];
+    normal.x = surfaceVertexDensities[to1D(globalSurfaceVertIndex3d + int3(1, 0, 0), cb.dimensions + int3(1, 1, 1))]
+                - surfaceVertexDensities[to1D(globalSurfaceVertIndex3d - int3(1, 0, 0), cb.dimensions + int3(1, 1, 1))];
 
-    normal.y = surfaceVertexDensities[to1D(globalSurfaceVertIndex3d + int3(0, 1, 0), cb.dimensions + 1)]
-                - surfaceVertexDensities[to1D(globalSurfaceVertIndex3d - int3(0, 1, 0), cb.dimensions + 1)];
+    normal.y = surfaceVertexDensities[to1D(globalSurfaceVertIndex3d + int3(0, 1, 0), cb.dimensions + int3(1, 1, 1))]
+                - surfaceVertexDensities[to1D(globalSurfaceVertIndex3d - int3(0, 1, 0), cb.dimensions + int3(1, 1, 1))];
     
-    normal.z = surfaceVertexDensities[to1D(globalSurfaceVertIndex3d + int3(0, 0, 1), cb.dimensions + 1)]
-                - surfaceVertexDensities[to1D(globalSurfaceVertIndex3d - int3(0, 0, 1), cb.dimensions + 1)];
+    normal.z = surfaceVertexDensities[to1D(globalSurfaceVertIndex3d + int3(0, 0, 1), cb.dimensions + int3(1, 1, 1))]
+                - surfaceVertexDensities[to1D(globalSurfaceVertIndex3d - int3(0, 0, 1), cb.dimensions + int3(1, 1, 1))];
 
     normal /= cb.resolution; // Even though this doesn't affect the direction of the normal, it's necessary for numerical stability, when normal components are close to zero.
     normal = normalize(normal);

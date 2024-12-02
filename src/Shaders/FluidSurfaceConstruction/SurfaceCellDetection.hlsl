@@ -11,26 +11,26 @@ struct Uniforms {
 // Constant buffer (root constant)
 ConstantBuffer<Uniforms> cb : register(b0);
 // SRV for surface block indices
-StructuredBuffer<uint> surfaceBlockIndices : register(t0);
+StructuredBuffer<int> surfaceBlockIndices : register(t0);
 // SRV for the surface cells
 StructuredBuffer<Cell> cells : register(t1);
 // SRV for the surface block dispatch
-StructuredBuffer<uint3> surfaceBlockDispatch : register(t2);
+StructuredBuffer<int3> surfaceBlockDispatch : register(t2);
 
 // Outputs
-RWStructuredBuffer<uint> surfaceVertices : register(u0);
+RWStructuredBuffer<int> surfaceVertices : register(u0);
 
-RWStructuredBuffer<uint3> surfaceHalfBlockDispatch : register(u1); // piggy-backing off this pass to set up an indirect dispatch for the mesh shading step
+RWStructuredBuffer<int3> surfaceHalfBlockDispatch : register(u1); // piggy-backing off this pass to set up an indirect dispatch for the mesh shading step
 
 // At a typical value of FILLED_BLOCK = 216, (4 + 2)^3, this is well within the limits of shared memory. 
-groupshared uint cellParticleCounts[FILLED_BLOCK];
+groupshared int cellParticleCounts[FILLED_BLOCK];
 
 // Since surface cells share vertices, keep track of whether the verts are surface verts in shared memory first,
 // then write them to the output buffer. This avoids excess global memory writes.
-groupshared uint s_surfaceVertices[(CELLS_PER_BLOCK_EDGE + 1) * (CELLS_PER_BLOCK_EDGE + 1) * (CELLS_PER_BLOCK_EDGE + 1)];
+groupshared int s_surfaceVertices[(CELLS_PER_BLOCK_EDGE + 1) * (CELLS_PER_BLOCK_EDGE + 1) * (CELLS_PER_BLOCK_EDGE + 1)];
 
 // Set the 8 vertices of a surface cell cube into shared memory
-void setSharedMemSurfaceVerts(int3 baseIndex3d, int3 dimensions, uint value) {
+void setSharedMemSurfaceVerts(int3 baseIndex3d, int3 dimensions, int value) {
     s_surfaceVertices[to1D(baseIndex3d + int3(0, 0, 0), dimensions)] = value;
     s_surfaceVertices[to1D(baseIndex3d + int3(0, 0, 1), dimensions)] = value;
     s_surfaceVertices[to1D(baseIndex3d + int3(0, 1, 0), dimensions)] = value;
@@ -42,7 +42,7 @@ void setSharedMemSurfaceVerts(int3 baseIndex3d, int3 dimensions, uint value) {
 }
 
 // Set the 8 vertices of a surface cell cube into the output buffer
-void setGlobalSurfaceVertsToValue(int3 globalIndex3d, int3 globalDims, uint value) {
+void setGlobalSurfaceVertsToValue(int3 globalIndex3d, int3 globalDims, int value) {
     surfaceVertices[to1D(globalIndex3d + int3(0, 0, 0), globalDims)] = value;
     surfaceVertices[to1D(globalIndex3d + int3(0, 0, 1), globalDims)] = value;
     surfaceVertices[to1D(globalIndex3d + int3(0, 1, 0), globalDims)] = value;
@@ -65,11 +65,11 @@ void setGlobalSurfaceVertsFromSharedMem(int3 globalIndex3d, int3 globalDims, int
     surfaceVertices[to1D(globalIndex3d + int3(1, 1, 1), globalDims)] = s_surfaceVertices[to1D(sharedIndex3d + int3(1, 1, 1), sharedDims)];
 }
 
-void setVertSharedMemory(uint index, uint value) {
+void setVertSharedMemory(int index, int value) {
     s_surfaceVertices[index] = value;
 }
 
-void setVertGlobalMemory(uint index, uint value) {
+void setVertGlobalMemory(int index, int value) {
     surfaceVertices[index] = value;
 }
 
@@ -84,11 +84,11 @@ void main(uint3 globalThreadId : SV_DispatchThreadID, uint3 localThreadId : SV_G
 
     // Piggy-backing off this pass to set up an indirect dispatch for the mesh shading step
     if (globalThreadId.x == 0) {
-        surfaceHalfBlockDispatch[0] = uint3(surfaceBlockDispatch[0].x * 2, 1, 1);
+        surfaceHalfBlockDispatch[0] = int3(surfaceBlockDispatch[0].x * 2, 1, 1);
     }
 
     // First order of business: we launched a thread for each cell within surface blocks. We need to figure out the global index for this thread's cell. 
-    uint surfaceBlockIdx1d = surfaceBlockIndices[globalThreadId.x / CELLS_PER_BLOCK];
+    int surfaceBlockIdx1d = surfaceBlockIndices[globalThreadId.x / CELLS_PER_BLOCK];
     // By aligning the number of threads per workgroup with the number of threads in a block, we can use the local thread ID as a proxy for the local cell index.
     int3 surfaceBlockIdx3d = to3D(surfaceBlockIdx1d, cb.gridCellDimensions / CELLS_PER_BLOCK_EDGE);
     int3 localCellIndex3d = to3D(localThreadId.x, CELLS_PER_BLOCK_EDGE * int3(1, 1, 1));

@@ -56,7 +56,7 @@ void main( uint3 globalThreadId : SV_DispatchThreadID ) {
 
     // TODO: consider 3D group dispatch to avoid 1D->3D conversion (3D->1D is less expensive)
     int globalSurfaceVertIndex1d = surfaceVertexIndices[globalThreadId.x];
-    int3 globalSurfaceVertIndex3d = to3D(globalSurfaceVertIndex1d, (cb.dimensions + 1) * int3(1, 1, 1));
+    int3 globalSurfaceVertIndex3d = to3D(globalSurfaceVertIndex1d, (cb.dimensions + int3(1, 1, 1)));
 
     float3 vertPos = cb.minBounds + float3(globalSurfaceVertIndex3d) * cb.resolution;
     float totalDensity = 0.0f;

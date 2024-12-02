@@ -3,13 +3,13 @@
 
 // Inputs
 // SRV for surface vertices buffer
-StructuredBuffer<uint> surfaceVertices : register(t0);
+StructuredBuffer<int> surfaceVertices : register(t0);
 // SRV for the dispatch arguments buffer
-StructuredBuffer<uint3> surfaceBlocksDispatch : register(t1);
+StructuredBuffer<int3> surfaceBlocksDispatch : register(t1);
 
 // Outputs (UAVs)
-RWStructuredBuffer<uint> surfaceVertexIndices : register(u0);
-RWStructuredBuffer<uint3> surfaceVertDensityDispatch : register(u1);
+RWStructuredBuffer<int> surfaceVertexIndices : register(u0);
+RWStructuredBuffer<int3> surfaceVertDensityDispatch : register(u1);
 
 /*
     Similar to SurfaceBlockDetection, this is effectively a stream compaction step. Again, instead of following the paper directly,
@@ -25,9 +25,9 @@ void main(uint3 globalThreadId : SV_DispatchThreadID) {
     }
 
     bool isSurfaceVertex = surfaceVertices[globalThreadId.x] > 0;  
-    uint localSurfaceVertexIndexInWave = WavePrefixCountBits(isSurfaceVertex);
-    uint surfaceVertexWaveCount = WaveActiveCountBits(isSurfaceVertex);
-    uint surfaceVertexGlobalStartIdx;
+    int localSurfaceVertexIndexInWave = WavePrefixCountBits(isSurfaceVertex);
+    int surfaceVertexWaveCount = WaveActiveCountBits(isSurfaceVertex);
+    int surfaceVertexGlobalStartIdx;
 
     if (WaveIsFirstLane()) {
         InterlockedAdd(surfaceVertDensityDispatch[0].x, surfaceVertexWaveCount, surfaceVertexGlobalStartIdx);
@@ -36,7 +36,7 @@ void main(uint3 globalThreadId : SV_DispatchThreadID) {
     surfaceVertexGlobalStartIdx = WaveReadLaneFirst(surfaceVertexGlobalStartIdx); // (its faster to use an intrinsic here than to write to a shared variable and sync)
 
     if (isSurfaceVertex) {
-        uint surfaceVertexGlobalIdx = surfaceVertexGlobalStartIdx + localSurfaceVertexIndexInWave;
+        int surfaceVertexGlobalIdx = surfaceVertexGlobalStartIdx + localSurfaceVertexIndexInWave;
         surfaceVertexIndices[surfaceVertexGlobalIdx] = globalThreadId.x;
     }
 }
