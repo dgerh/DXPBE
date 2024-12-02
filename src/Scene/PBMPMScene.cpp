@@ -15,11 +15,7 @@ PBMPMScene::PBMPMScene(DXContext* context, RenderPipeline* pipeline, unsigned in
 		D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE)
 
 {
-	context->resetCommandList(CommandListID::PBMPM_G2P2G_COMPUTE_ID);
-	context->resetCommandList(CommandListID::PBMPM_BUKKITCOUNT_COMPUTE_ID);
-	context->resetCommandList(CommandListID::PBMPM_BUKKITALLOCATE_COMPUTE_ID);
-	context->resetCommandList(CommandListID::PBMPM_BUKKITINSERT_COMPUTE_ID);
-	context->resetCommandList(CommandListID::PBMPM_BUFFERCLEAR_COMPUTE_ID);
+	
 	constructScene();
 }
 
@@ -349,6 +345,12 @@ void PBMPMScene::constructScene() {
 	int particlesPerRow = (int)sqrt(instanceCount);
 	int particlesPerCol = (instanceCount - 1) / particlesPerRow + 1;
 
+	float gridSize = 512.0f;
+	float guardianOffset = GuardianSize + 1.0f;
+	float usableGridSize = gridSize - 2 * guardianOffset;
+	float scalingFactor = usableGridSize / particlesPerRow;
+
+
 	std::vector<PBMPMParticle> particles;
 	particles.resize(maxParticles);
 	// Uniform for each particle for now
@@ -356,8 +358,14 @@ void PBMPMScene::constructScene() {
 	const float volume = 1.f / float(constants.particlesPerCellAxis * constants.particlesPerCellAxis * constants.particlesPerCellAxis);
 	// Create initial particle data
 	for (int i = 0; i < instanceCount; ++i) {
-		XMFLOAT3 position ={ (((i % particlesPerRow) * spacing - (particlesPerRow - 1) * spacing / 2.f) + 0.4f) * 500,
-							  (((i / particlesPerRow) * spacing - (particlesPerCol - 1) * spacing / 2.f) + 0.4f) * 500, 0.f};
+
+		float x = ((i % particlesPerRow) * spacing * scalingFactor) + guardianOffset;
+		float y = ((i / particlesPerRow) * spacing * scalingFactor) + guardianOffset;
+		float z = guardianOffset;
+		XMFLOAT3 position = { x, y, z };
+
+		/*XMFLOAT3 position ={ (((i % particlesPerRow) * spacing - (particlesPerRow - 1) * spacing / 2.f) + 0.4f) * 500,
+							  (((i / particlesPerRow) * spacing - (particlesPerCol - 1) * spacing / 2.f) + 0.4f) * 500, 0.f};*/
 		particles[i] = {position, 1.0, {0.f, 0.f, 0.f}, density * volume, 0, volume, 0.0, 1.0, 1.0,
 						{ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0 },
 						{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 } };
