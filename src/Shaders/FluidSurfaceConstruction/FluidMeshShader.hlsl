@@ -99,14 +99,16 @@ int computeMarchingCubesCase(int3 globalCellIndices) {
     // TODO: this is a LOT of global memory reads... (and redundant ones at that)
     int mcCase = 0;
     int3 globalVertDims = (cb.dimensions + int3(1, 1, 1));
+    
     mcCase += (vertexDensities[to1D(globalCellIndices + int3(0, 0, 0), globalVertDims)] > ISOVALUE) << 0;
     mcCase += (vertexDensities[to1D(globalCellIndices + int3(1, 0, 0), globalVertDims)] > ISOVALUE) << 1;
-    mcCase += (vertexDensities[to1D(globalCellIndices + int3(1, 0, 1), globalVertDims)] > ISOVALUE) << 2;
-    mcCase += (vertexDensities[to1D(globalCellIndices + int3(0, 0, 1), globalVertDims)] > ISOVALUE) << 3;
+    mcCase += (vertexDensities[to1D(globalCellIndices + int3(0, 0, 1), globalVertDims)] > ISOVALUE) << 2;
+    mcCase += (vertexDensities[to1D(globalCellIndices + int3(1, 0, 1), globalVertDims)] > ISOVALUE) << 3;
     mcCase += (vertexDensities[to1D(globalCellIndices + int3(0, 1, 0), globalVertDims)] > ISOVALUE) << 4;
     mcCase += (vertexDensities[to1D(globalCellIndices + int3(1, 1, 0), globalVertDims)] > ISOVALUE) << 5;
-    mcCase += (vertexDensities[to1D(globalCellIndices + int3(1, 1, 1), globalVertDims)] > ISOVALUE) << 6;
-    mcCase += (vertexDensities[to1D(globalCellIndices + int3(0, 1, 1), globalVertDims)] > ISOVALUE) << 7;
+    mcCase += (vertexDensities[to1D(globalCellIndices + int3(0, 1, 1), globalVertDims)] > ISOVALUE) << 6;
+    mcCase += (vertexDensities[to1D(globalCellIndices + int3(1, 1, 1), globalVertDims)] > ISOVALUE) << 7;
+
     return mcCase;
 }
 
@@ -114,22 +116,18 @@ int computeMarchingCubesCase(int3 globalCellIndices) {
 // In `getGlobalVerticesForEdge`, we implicitly treated ascending block-edge indices as being all along one axis first, then the next, then the next.
 // Moreover, in setting up the Marching Cubes tables, we implicitly assigned an order to local cell-edge indices. 
 // Both of these implicit assignments need to be considered to map from a cell edge to a block edge.
-static const int edgeOffsets[12] = {0, 61, 4, 60, 20, 81, 24, 80, 120, 121, 126, 125};
+//
+// See MarchingCubesTables.hlsl for local edge orderings. The offsets map a local edge to a block edge.
+static const int edgeOffsets[12] = {0, 4, 20, 24, 60, 61, 80, 81, 120, 121, 125, 126};
 int cellEdgeToBlockEdge(int localCellIdx1d, int localEdgeIdx, int halfBlockIndex) {
+    int axis = localEdgeIdx / 4;
     localCellIdx1d -= halfBlockIndex * CELLS_PER_HALFBLOCK;
-    
-    int firstEdge = localCellIdx1d % 16 + (localCellIdx1d / 16) * 20;
     int3 localCellIdx3d = to3D(localCellIdx1d, CELLS_PER_BLOCK_EDGE * int3(1, 1, 1));
-    int j = localCellIdx3d.y;
-    int k = localCellIdx3d.z;
 
-    int val = firstEdge + edgeOffsets[localEdgeIdx];
-    if (localEdgeIdx >= 8){
-        return val + j + 5 * k;
-    } else if(localEdgeIdx % 2 == 1){
-        return val + j;
-    }
-    return val;
+    // Put back into 1D, but using the dimensions of the edges along a given axis
+    int dimensionOffset = to1D(localCellIdx3d, edgeDims[axis]);
+
+    return edgeOffsets[localEdgeIdx] + dimensionOffset;    
 }
 
 [outputtopology("triangle")]
@@ -151,8 +149,9 @@ void main(
 
     int blockIdx1d = surfaceBlockIndices[globalThreadId.x / CELLS_PER_BLOCK];
     int3 blockIdx3d = to3D(blockIdx1d, (cb.dimensions / CELLS_PER_BLOCK_EDGE));
-
-    int halfBlockIndex = (localThreadId.x < CELLS_PER_BLOCK / 2) ? 0 : 1;
+    
+    int localCellIdx1d = globalThreadId.x % CELLS_PER_BLOCK;
+    int halfBlockIndex = (localCellIdx1d < (CELLS_PER_BLOCK / 2)) ? 0 : 1;
 
     // Each thread processes 170 / workgroup_size edges (170 is the number of edges in a 4x4x2 half block)
     int vertexCount = 0;
@@ -185,7 +184,7 @@ void main(
         float3 vertexNormals[2] = getVertexNormals(vertexIndices);
         
         float t = interpolateDensity(density0, density1);
-        float3 vertPosWorld = cb.minBounds + cb.resolution * lerp(vertexIndices[0], vertexIndices[1], t);
+        float3 vertPosWorld = cb.minBounds + cb.resolution * lerp(float3(vertexIndices[0]), float3(vertexIndices[1]), t);
         float4 vertPosClip = mul(cb.viewProj, float4(vertPosWorld, 1.0));
         float3 vertNormal = -normalize(lerp(vertexNormals[0], vertexNormals[1], t)); // Paper negates normals, not sure why!
 
@@ -200,14 +199,9 @@ void main(
         vertexNormalsShared[outputVertexIndex] = vertNormal.xy;
     }
 
-    // Every surface block has surface vertices, but since each workgroup represents a *half*-blocks,
-    // it's possible for a workgroup's half block to have no surface vertices. 
-    if (vertexCount == 0) return;
-
     GroupMemoryBarrierWithGroupSync();
 
     // From here on out, every thread acts as a single cell (TODO: this is where I want to try optimizing; return early for non-surface cells)
-    int localCellIdx1d = globalThreadId.x % CELLS_PER_BLOCK;
     int3 localCellIdx3d = to3D(localCellIdx1d, CELLS_PER_BLOCK_EDGE * int3(1, 1, 1)); // TODO: can we avoid this conversion with 3D dispatch?
     int3 globalCellIdx3d = blockIdx3d * CELLS_PER_BLOCK_EDGE + localCellIdx3d;
 
@@ -218,6 +212,12 @@ void main(
 
     // We finally have all the info we need to tell the mesh shader how many vertices and primitives we're outputting.
     SetMeshOutputCounts(vertexCount, totalTris);
+
+    // Every surface block has surface vertices, but since each workgroup represents a *half*-blocks,
+    // it's possible for a workgroup's half block to have no surface vertices. 
+    // Note: paper does this early-return before MC case computation (which is great because it's cheaper). Unfortunately I believe it's undefined behavior,
+    // because all threads have to set mesh output counts.
+    if (vertexCount == 0) return;
 
     // Now we do the actual marching cubes / outputting of vertices and tris
     int triTable[12] = triangleTable[mcCase];

@@ -77,6 +77,23 @@ void FluidScene::draw(Camera* camera) {
     // Draws
     cmdList->ExecuteIndirect(meshCommandSignature, 1, surfaceHalfBlockDispatch.getBuffer(), 0, nullptr, 0);
 
+    // TODO Temporary: just so these two buffers can be transitioned along with everything else
+    D3D12_RESOURCE_BARRIER surfaceHalfBlockDispatchBarrier3 = CD3DX12_RESOURCE_BARRIER::Transition(
+        surfaceHalfBlockDispatch.getBuffer(),
+        D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT,
+        D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE|D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
+    );
+
+    D3D12_RESOURCE_BARRIER surfaceVertDensityDispatchBarrier2 = CD3DX12_RESOURCE_BARRIER::Transition(
+        surfaceVertDensityDispatch.getBuffer(),
+        D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+        D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE|D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
+    );
+
+    D3D12_RESOURCE_BARRIER barriers2[2] = { surfaceHalfBlockDispatchBarrier3, surfaceVertDensityDispatchBarrier2 };
+    cmdList->ResourceBarrier(2, barriers2);
+    // End temporary
+
     transitionBuffers(cmdList, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE|D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_COPY_DEST);
     resetBuffers(cmdList);
     transitionBuffers(cmdList, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
@@ -93,7 +110,7 @@ float getRandomFloatInRange(float min, float max) {
 
 void FluidScene::constructScene() {
     int blocksPerEdge = 3;
-    int numParticlesPerCell = 16;
+    int numParticlesPerCell = 8;
     int numParticles = numParticlesPerCell * blocksPerEdge * CELLS_PER_BLOCK_EDGE * blocksPerEdge * CELLS_PER_BLOCK_EDGE * blocksPerEdge * CELLS_PER_BLOCK_EDGE;
     numParticles -= numParticlesPerCell * blocksPerEdge * CELLS_PER_BLOCK_EDGE * blocksPerEdge * CELLS_PER_BLOCK_EDGE; // Skip the top level of cells
     gridConstants = { numParticles, {blocksPerEdge * CELLS_PER_BLOCK_EDGE, blocksPerEdge * CELLS_PER_BLOCK_EDGE, blocksPerEdge * CELLS_PER_BLOCK_EDGE}, {0.f, 0.f, 0.f}, 0.1f };
@@ -104,8 +121,8 @@ void FluidScene::constructScene() {
         for (int i = 0; i < gridConstants.gridDim.x; ++i) {
             for (int j = 0; j < gridConstants.gridDim.y; ++j) {
                 for (int k = 0; k < gridConstants.gridDim.z; ++k) {
-                    // SKip i,j,k = top level of cells, that way the top level is empty and the second-to-top level becomes the "surface"
-                    if (k == gridConstants.gridDim.z - 1) {
+                    // Skip i,j,k = top level of cells, that way the top level is empty and the second-to-top level becomes the "surface"
+                    if (j == gridConstants.gridDim.z - 1) {
                         continue;
                     }
 
@@ -134,7 +151,7 @@ void FluidScene::constructScene() {
     XMUINT3 dipatchCPU = { 0, 1, 1 };
     std::vector<int> surfaceVertices(numVerts, 0);
     std::vector<int> surfaceVertexIndices(numVerts, 0);
-    std::vector<float> surfaceVertexDensities(numVerts, 0.f);
+    std::vector<float> surfaceVertexDensities(numVerts, 1.f); // initialize density to 1 (and reset it to 1). Just has to be above ISOVALUE
     std::vector<XMFLOAT2> surfaceVertexNormals(numVerts, { 0.f, 0.f }); // (x, y) components of the normal; z component can be inferred. This helps save space.
 
     // Use the descriptor heap for the bilevelUniformGridCP for pretty much everything. Simplifies sharing resources
