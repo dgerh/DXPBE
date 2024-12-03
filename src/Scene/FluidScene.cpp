@@ -109,11 +109,11 @@ float getRandomFloatInRange(float min, float max) {
 }
 
 void FluidScene::constructScene() {
-    int blocksPerEdge = 3;
+    int blocksPerEdge = 16;
     int numParticlesPerCell = 8;
     int numParticles = numParticlesPerCell * blocksPerEdge * CELLS_PER_BLOCK_EDGE * blocksPerEdge * CELLS_PER_BLOCK_EDGE * blocksPerEdge * CELLS_PER_BLOCK_EDGE;
     numParticles -= numParticlesPerCell * blocksPerEdge * CELLS_PER_BLOCK_EDGE * blocksPerEdge * CELLS_PER_BLOCK_EDGE; // Skip the top level of cells
-    gridConstants = { numParticles, {blocksPerEdge * CELLS_PER_BLOCK_EDGE, blocksPerEdge * CELLS_PER_BLOCK_EDGE, blocksPerEdge * CELLS_PER_BLOCK_EDGE}, {0.f, 0.f, 0.f}, 0.1f };
+    gridConstants = { numParticles, {blocksPerEdge * CELLS_PER_BLOCK_EDGE, blocksPerEdge * CELLS_PER_BLOCK_EDGE, blocksPerEdge * CELLS_PER_BLOCK_EDGE}, {0.f, 0.f, 0.f}, 0.01f };
 
     // Populate position data. Place a particle per-cell in a 12x12x12 block of cells, each at a random position in a cell.
     // (Temporary, eventually, position data will come from simulation)
@@ -152,7 +152,7 @@ void FluidScene::constructScene() {
     std::vector<int> surfaceVertices(numVerts, 0);
     std::vector<int> surfaceVertexIndices(numVerts, 0);
     std::vector<float> surfaceVertexDensities(numVerts, 1.f); // initialize density to 1 (and reset it to 1). Just has to be above ISOVALUE
-    std::vector<XMFLOAT2> surfaceVertexNormals(numVerts, { 0.f, 0.f }); // (x, y) components of the normal; z component can be inferred. This helps save space.
+    std::vector<XMFLOAT3> surfaceVertexNormals(numVerts, { 0.f, 0.f, 0.f });
 
     // Use the descriptor heap for the bilevelUniformGridCP for pretty much everything. Simplifies sharing resources
     blocksBuffer = StructuredBuffer(blocks.data(), numBlocks, sizeof(Block));
@@ -200,7 +200,7 @@ void FluidScene::constructScene() {
     surfaceVertDensityBuffer.createUAV(*context, bilevelUniformGridCP->getDescriptorHeap());
     surfaceVertDensityBuffer.createSRV(*context, bilevelUniformGridCP->getDescriptorHeap());
 
-    surfaceVertexNormalBuffer = StructuredBuffer(surfaceVertexNormals.data(), numVerts, sizeof(XMFLOAT2));
+    surfaceVertexNormalBuffer = StructuredBuffer(surfaceVertexNormals.data(), numVerts, sizeof(XMFLOAT3));
     surfaceVertexNormalBuffer.passDataToGPU(*context, bilevelUniformGridCP->getCommandList(), bilevelUniformGridCP->getCommandListID());
     surfaceVertexNormalBuffer.createUAV(*context, bilevelUniformGridCP->getDescriptorHeap()); 
     surfaceVertexNormalBuffer.createSRV(*context, bilevelUniformGridCP->getDescriptorHeap());
@@ -218,7 +218,7 @@ void FluidScene::constructScene() {
     blankSurfaceVertDensityBuffer = StructuredBuffer(surfaceVertexDensities.data(), numVerts, sizeof(float));
     blankSurfaceVertDensityBuffer.passDataToGPU(*context, bilevelUniformGridCP->getCommandList(), bilevelUniformGridCP->getCommandListID());
 
-    blankSurfaceVertexNormalBuffer = StructuredBuffer(surfaceVertexNormals.data(), numVerts, sizeof(XMFLOAT2));
+    blankSurfaceVertexNormalBuffer = StructuredBuffer(surfaceVertexNormals.data(), numVerts, sizeof(XMFLOAT3));
     blankSurfaceVertexNormalBuffer.passDataToGPU(*context, bilevelUniformGridCP->getCommandList(), bilevelUniformGridCP->getCommandListID());
 
 	// Create Command Signature

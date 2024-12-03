@@ -14,9 +14,7 @@ ConstantBuffer<BilevelUniformGridConstants> cb : register(b0);
 
 // Outputs
 // UAV for the surface vertex normals
-// Note: to save on memory bandwidth, store normals as float2s (with z component implied by normalization constraint). 
-// TODO: consider compressing further using packed normals. (Also pack particle positions in other compute passes?)
-RWStructuredBuffer<float2> surfaceVertexNormals : register(u0);
+RWStructuredBuffer<float3> surfaceVertexNormals : register(u0);
 
 
 // TODO: 3D dispatch for better indexing
@@ -43,5 +41,5 @@ void main(uint3 globalThreadId : SV_DispatchThreadID) {
     normal = normalize(normal);
 
     // Like densities buffer, not compressed, but the only populated entries are for surface vertices.
-    surfaceVertexNormals[globalSurfaceVertIndex1d] = float2(normal.x, normal.y);
+    surfaceVertexNormals[globalSurfaceVertIndex1d] = normal;
 }

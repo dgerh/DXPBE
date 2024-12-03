@@ -21,6 +21,7 @@ void MeshPipeline::createPSOD() {
     psod.SampleDesc.Count = 1;
     psod.SampleMask = UINT_MAX;
     psod.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+    psod.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
     psod.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
     psod.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
 }

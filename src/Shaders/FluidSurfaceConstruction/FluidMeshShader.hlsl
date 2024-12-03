@@ -9,7 +9,7 @@ StructuredBuffer<int> surfaceBlockIndices : register(t0);
 // SRV for vertex densities
 StructuredBuffer<float> vertexDensities : register(t1);
 // SRV for vertex normals
-StructuredBuffer<float2> vertexNormals : register(t2);
+StructuredBuffer<float3> vertexNormals : register(t2);
 // SRV for dispatch parameters
 StructuredBuffer<int3> surfaceHalfBlockDispatch : register(t3);
 // Root constants
@@ -25,14 +25,14 @@ RWStructuredBuffer<int3> surfaceVertDensityDispatch : register(u0); // purely fo
 groupshared int outputVertexIndices[MAX_VERTICES];
 // Rest are vertex attributes (indexed by outputVertexIndices)
 groupshared float3 vertexWorldPositions[MAX_VERTICES];
-groupshared float2 vertexNormalsShared[MAX_VERTICES]; // z normal component can be inferred in frag shader
+groupshared float3 vertexNormalsShared[MAX_VERTICES];
 groupshared float4 vertexClipPositions[MAX_VERTICES];
 
 // Define the payload structure
 struct VertexOutput
 {
     float4 clipPos : SV_POSITION;
-    float2 normal : NORMAL;
+    float3 normal : NORMAL;
     float3 worldPos : TEXCOORD0;
 };
 
@@ -66,13 +66,8 @@ int3 getGlobalVerticesForEdge(int3 blockIndices, int blockEdge, int halfBlockInd
 }
 
 float3 getVertexNormals(int3 vertexIndices[2])[2] {
-    float3 normal0, normal1;
-    normal0.xy = vertexNormals[to1D(vertexIndices[0], (cb.dimensions + int3(1, 1, 1)))];
-    normal1.xy = vertexNormals[to1D(vertexIndices[1], (cb.dimensions + int3(1, 1, 1)))];
-
-    // Need to infer z component of normals
-    normal0 = float3(normal0.xy, sqrt(1 - dot(normal0, normal0)));
-    normal1 = float3(normal1.xy, sqrt(1 - dot(normal1, normal1)));
+    float3 normal0 = vertexNormals[to1D(vertexIndices[0], (cb.dimensions + int3(1, 1, 1)))];
+    float3 normal1 = vertexNormals[to1D(vertexIndices[1], (cb.dimensions + int3(1, 1, 1)))];
 
     float3 normals[2] = {normal0, normal1};
     return normals;
@@ -196,7 +191,7 @@ void main(
         // (For that reason, mostly, we write the vertex attributes to shared memory first; otherwise we could just write them output right now, before we know the total count).
         vertexWorldPositions[outputVertexIndex] = vertPosWorld;
         vertexClipPositions[outputVertexIndex] = vertPosClip;
-        vertexNormalsShared[outputVertexIndex] = vertNormal.xy;
+        vertexNormalsShared[outputVertexIndex] = vertNormal;
     }
 
     GroupMemoryBarrierWithGroupSync();
