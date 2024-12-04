@@ -10,6 +10,7 @@
 #define MaterialElastic 1
 #define MaterialSand 2
 #define MaterialVisco 3
+#define MaterialSnow 4
 
 #define ShapeTypeBox 0
 #define ShapeTypeCircle 1
@@ -199,7 +200,23 @@ float2x2 rot(float angle)
     return float2x2(c, -s, s, c);
 }
 
+struct SnowMaterialParams {
+    float criticalCompression;
+    float criticalStretch;
+    float hardeningCoeff;
+    float youngModulus;
+    float poissonRatio;
 
+    // Lamé parameters calculation
+    float getLambda() {
+        return (youngModulus * poissonRatio) /
+            ((1.0f + poissonRatio) * (1.0f - 2.0f * poissonRatio));
+    }
+
+    float getMu() {
+        return youngModulus / (2.0f * (1.0f + poissonRatio));
+    }
+};
 
 struct CollideResult
 {
