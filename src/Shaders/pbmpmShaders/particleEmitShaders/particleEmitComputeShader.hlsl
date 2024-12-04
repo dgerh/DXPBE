@@ -36,24 +36,26 @@ float randomFloat(uint input)
     return float(hash(input) % 10000) / 9999.0;
 }
 
-bool insideGuardian(uint2 id, uint2 gridSize, uint guardianSize)
+bool insideGuardian(uint3 id, uint3 gridSize, uint guardianSize)
 {
     if (id.x <= guardianSize) { return false; }
     if (id.x >= (gridSize.x - guardianSize - 1)) { return false; }
     if (id.y <= guardianSize) { return false; }
     if (id.y >= gridSize.y - guardianSize - 1) { return false; }
+    if (id.z <= guardianSize) { return false; }
+    if (id.z >= gridSize.z - guardianSize - 1) { return false; }
 
     return true;
 }
 
-Particle createParticle(float2 position, float material, float mass, float volume)
+Particle createParticle(float3 position, float material, float mass, float volume)
 {
     Particle particle;
 
     particle.position = position;
-    particle.displacement = float2(0, 0);
-    particle.deformationGradient = Identity;
-    particle.deformationDisplacement = ZeroMatrix;
+    particle.displacement = float3(0, 0, 0);
+    particle.deformationGradient = expandToFloat4x4(Identity);
+    particle.deformationDisplacement = expandToFloat4x4(ZeroMatrix);
 
     particle.liquidDensity = 1.0;
     particle.mass = mass;
@@ -67,7 +69,7 @@ Particle createParticle(float2 position, float material, float mass, float volum
     return particle;
 }
 
-void addParticle(float2 position, float material, float volume, float density, float jitterScale)
+void addParticle(float3 position, float material, float volume, float density, float jitterScale)
 {
     uint particleIndex = 0;
     // First check the free list to see if we can reuse a particle slot
@@ -90,7 +92,7 @@ void addParticle(float2 position, float material, float volume, float density, f
     float2 jitter = float2(-0.25, -0.25) + 0.5 * float2(float(jitterX % 10) / 10, float(jitterY % 10) / 10);
 
     Particle newParticle = createParticle(
-        position + jitter * jitterScale,
+        position + float3(jitter.x, jitter.y, 0.f) * jitterScale,
         material,
         volume * density,
         volume
@@ -102,17 +104,17 @@ void addParticle(float2 position, float material, float volume, float density, f
 [numthreads(GridDispatchSize, GridDispatchSize, 1)]
 void main(uint3 id : SV_DispatchThreadID)
 {
-    if (!insideGuardian(id.xy, g_simConstants.gridSize, GuardianSize + 1))
+    if (!insideGuardian(id.xyz, g_simConstants.gridSize, GuardianSize + 1))
     {
         return;
     }
 
     uint2 gridSize = g_simConstants.gridSize;
-    float2 pos = float2(id.xy);
+    float3 pos = float3(id.xyz);
 
     QuadraticWeightInfo weightInfo = quadraticWeightInit(pos);
-    int2 nearestCell = int2(weightInfo.cellIndex) + int2(1, 1);
-    float nearestCellVolume = decodeFixedPoint(g_grid[gridVertexIndex(uint2(nearestCell), g_simConstants.gridSize) + 3], g_simConstants.fixedPointMultiplier);
+    int3 nearestCell = int3(weightInfo.cellIndex) + int3(1, 1, 1);
+    float nearestCellVolume = decodeFixedPoint(g_grid[gridVertexIndex(uint3(nearestCell), g_simConstants.gridSize) + 4], g_simConstants.fixedPointMultiplier);
 
     for (int shapeIndex = 0; shapeIndex < g_simConstants.shapeCount; shapeIndex++)
     {
@@ -151,7 +153,7 @@ void main(uint3 id : SV_DispatchThreadID)
                     bool emitDueToMyTurnHappening = isEmitter && 0 == ((hashCode + g_simConstants.simFrame) % emitEvery);
                     bool emitDueToInitialEmission = isInitialEmitter && g_simConstants.simFrame == 0;
 
-                    float2 emitPos = pos + float2(float(i), float(j)) / float(particleCountPerCellAxis);
+                    float3 emitPos = pos + float3(float(i), float(j), 0) / float(particleCountPerCellAxis);
 
                     if (emitDueToInitialEmission || emitDueToMyTurnHappening)
                     {

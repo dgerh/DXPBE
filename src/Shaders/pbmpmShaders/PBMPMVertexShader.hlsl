@@ -33,8 +33,8 @@ struct VSInput
 [RootSignature(ROOTSIG)]
 float4 main(VSInput input) : SV_Position
 {
-
-    float3 particlePosition = float3(particles[input.InstanceID].position, 0);
+trieve the particle position for the current instance
+    float3 particlePosition = float3(particles[input.InstanceID].position);
 
     // Apply the model, view, and projection transformations
     float4 worldPos = mul(modelMatrix, float4(input.Position + particlePosition, 1.0));

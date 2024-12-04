@@ -66,6 +66,7 @@ float tr(float2x2 m)
 float tr3D(float3x3 m) {
     return m[0][0] + m[1][1] + m[2][2];
 }
+
 float3x3 rotX(float theta)
 {
     float ct = cos(theta);
@@ -120,6 +121,9 @@ float3x3 inverse(float3x3 m) {
     adj[2][2] = +(m[0][0] * m[1][1] - m[1][0] * m[0][1]);
     return adj * (1.0 / d);
 
+}
+
+
 float3x3 outerProduct(float3 x, float3 y) {
     return float3x3(
         x.x * y.x, x.x * y.y, x.x * y.z,
@@ -144,6 +148,7 @@ float2x2 truncate(float4x4 m)
     return float2x2(m[0].xy, m[1].xy);
 }
 
+
 float4x4 expandToFloat4x4(float2x2 m)
 {
     return float4x4(
@@ -165,16 +170,13 @@ float4x4 expandToFloat4x4(float3x3 m)
 }
 
 
+
 struct SVDResult
 {
     float3x3 U;
     float3 Sigma;
     float3x3 Vt;
 };
-
-// Define constants for identity and zero matrices
-static const float3x3 Identity = float3x3(1, 0, 0, 0, 1, 0, 0, 0, 1);
-static const float3x3 ZeroMatrix = float3x3(0, 0, 0, 0, 0, 0, 0, 0, 0);
 
 float3x3 givensRotation(float c, float s, int i, int j, int n) {
     float3x3 G = Identity;
@@ -384,8 +386,6 @@ void main(uint indexInGroup : SV_GroupIndex, uint3 groupId : SV_GroupID)
     InterlockedExchange(s_tileDataDst[tileDataIndex + 2], 0, originalValue);
     InterlockedExchange(s_tileDataDst[tileDataIndex + 3], 0, originalValue);
     InterlockedExchange(s_tileDataDst[tileDataIndex + 4], 0, originalValue);
-
-
 
     // Synchronize all threads in the group
     GroupMemoryBarrierWithGroupSync();
@@ -606,13 +606,14 @@ void main(uint indexInGroup : SV_GroupIndex, uint3 groupId : SV_GroupID)
 
                 // Mouse Iteraction Here
 
-                if (g_simConstants.mouseActivation > 0)
+                /*if (g_simConstants.mouseActivation > 0)
+
                 {
-                    float2 offset = particle.position - g_simConstants.mousePosition;
+                    float3 offset = particle.position - g_simConstants.mousePosition;
                     float lenOffset = max(length(offset), 0.0001);
                     if (lenOffset < g_simConstants.mouseRadius)
                     {
-                        float2 normOffset = offset / lenOffset;
+                        float3 normOffset = offset / lenOffset;
 
                         if (g_simConstants.mouseFunction == 0)
                         {
@@ -623,7 +624,7 @@ void main(uint indexInGroup : SV_GroupIndex, uint3 groupId : SV_GroupID)
                             particle.displacement = g_simConstants.mouseVelocity * g_simConstants.deltaTime;
                         }
                     }
-                }
+                }*/
                 
 
                 // Gravity Acceleration is normalized to the vertical size of the window
