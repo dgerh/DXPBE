@@ -67,42 +67,42 @@ float tr3D(float3x3 m) {
     return m[0][0] + m[1][1] + m[2][2];
 }
 
-float3x3 rotX(float theta)
-{
-    float ct = cos(theta);
-    float st = sin(theta);
-    return float3x3(
-        1, 0, 0,
-        0, ct, -st,
-        0, st, ct
-    );
-}
-float3x3 rotY(float theta)
-{
-    float ct = cos(theta);
-    float st = sin(theta);
-    return float3x3(
-        ct, 0, st,
-        0, 1, 0,
-        -st, 0, ct
-    );
-}
-float3x3 rotZ(float theta)
-{
-    float ct = cos(theta);
-    float st = sin(theta);
-    return float3x3(
-        ct, -st, 0,
-        st, ct, 0,
-        0, 0, 1
-    );
-}
-// Function to create a rotation matrix from Euler angles
-float3x3 rot3D(float3 angles) // angles in radians (x, y, z)
-{
-    // Compose rotations in ZYX order
-    return mul(rotZ(angles.z), mul(rotY(angles.y), rotX(angles.x)));
-}
+//float3x3 rotX(float theta)
+//{
+//    float ct = cos(theta);
+//    float st = sin(theta);
+//    return float3x3(
+//        1, 0, 0,
+//        0, ct, -st,
+//        0, st, ct
+//    );
+//}
+//float3x3 rotY(float theta)
+//{
+//    float ct = cos(theta);
+//    float st = sin(theta);
+//    return float3x3(
+//        ct, 0, st,
+//        0, 1, 0,
+//        -st, 0, ct
+//    );
+//}
+//float3x3 rotZ(float theta)
+//{
+//    float ct = cos(theta);
+//    float st = sin(theta);
+//    return float3x3(
+//        ct, -st, 0,
+//        st, ct, 0,
+//        0, 0, 1
+//    );
+//}
+//// Function to create a rotation matrix from Euler angles
+//float3x3 rot3D(float3 angles) // angles in radians (x, y, z)
+//{
+//    // Compose rotations in ZYX order
+//    return mul(rotZ(angles.z), mul(rotY(angles.y), rotX(angles.x)));
+//}
 
 
 
@@ -149,25 +149,25 @@ float2x2 truncate(float4x4 m)
 }
 
 
-float4x4 expandToFloat4x4(float2x2 m)
-{
-    return float4x4(
-        m[0][0], m[0][1], 0.0, 0.0,
-        m[1][0], m[1][1], 0.0, 0.0,
-        0.0, 0.0, 0.0, 0.0,
-        0.0, 0.0, 0.0, 0.0
-    );
-}
-
-float4x4 expandToFloat4x4(float3x3 m)
-{
-    return float4x4(
-        m[0][0], m[0][1], m[0][2], 0.0,
-        m[1][0], m[1][1], m[1][2], 0.0,
-        m[2][0], m[2][1], m[2][2], 0.0,
-        0.0, 0.0, 0.0, 0.0
-    );
-}
+//float4x4 expandToFloat4x4(float2x2 m)
+//{
+//    return float4x4(
+//        m[0][0], m[0][1], 0.0, 0.0,
+//        m[1][0], m[1][1], 0.0, 0.0,
+//        0.0, 0.0, 0.0, 0.0,
+//        0.0, 0.0, 0.0, 0.0
+//    );
+//}
+//
+//float4x4 expandToFloat4x4(float3x3 m)
+//{
+//    return float4x4(
+//        m[0][0], m[0][1], m[0][2], 0.0,
+//        m[1][0], m[1][1], m[1][2], 0.0,
+//        m[2][0], m[2][1], m[2][2], 0.0,
+//        0.0, 0.0, 0.0, 0.0
+//    );
+//}
 
 
 
