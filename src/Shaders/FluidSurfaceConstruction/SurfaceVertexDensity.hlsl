@@ -22,8 +22,10 @@ StructuredBuffer<uint3> surfaceVertDensityDispatch : register(t3);
 ConstantBuffer<BilevelUniformGridConstants> cb : register(b0);
 
 // Outputs
+// Root UAV for the surface block dispatch (SOLELY to reset it without an extra compute pass)
+RWStructuredBuffer<uint3> surfaceBlockDispatch : register(u0);
 // UAV for the surface vertex densities
-RWStructuredBuffer<float> surfaceVertexDensities : register(u0);
+RWStructuredBuffer<float> surfaceVertexDensities : register(u1);
 
 float P(float d, float h)
 {
@@ -51,6 +53,11 @@ float isotropicKernel(float3 r, float h)
 void main( uint3 globalThreadId : SV_DispatchThreadID ) {
     if (globalThreadId.x >= surfaceVertDensityDispatch[0].x) {
         return;
+    }
+
+    // Piggy back off this pass to reset the surface block dispatch buffer for the next frame.
+    if (globalThreadId.x == 0) {
+        surfaceBlockDispatch[0].x = 0;
     }
 
     // TODO: consider 3D group dispatch to avoid 1D->3D conversion (3D->1D is less expensive)

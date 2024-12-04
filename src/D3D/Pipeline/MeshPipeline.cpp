@@ -30,7 +30,7 @@ void MeshPipeline::createPipelineState(ComPointer<ID3D12Device6> device) {
     D3D12_PIPELINE_STATE_STREAM_DESC streamDesc = { sizeof(psoStream), &psoStream };
     HRESULT hr = device->CreatePipelineState(&streamDesc, IID_PPV_ARGS(&pso));
 
-   /* if (FAILED(hr)) {
+    if (FAILED(hr)) {
         throw std::runtime_error("Failed to create compute pipeline state");
-    }*/
+    }
 }

@@ -54,7 +54,7 @@ public:
     void releaseResources();
 
 private:
-    void transitionBuffersToUAV(ID3D12GraphicsCommandList6* cmdList);
+    void transitionBuffersToUAV(ID3D12GraphicsCommandList6* cmdList, D3D12_RESOURCE_STATES state);
 
     GridConstants gridConstants;
     
@@ -71,6 +71,7 @@ private:
 	ComPointer<ID3D12Fence> fence;
 
 	ID3D12CommandSignature* commandSignature = nullptr;
+    ID3D12CommandSignature* meshCommandSignature = nullptr;
 
     std::vector<XMFLOAT3> positions;
 	StructuredBuffer positionBuffer;

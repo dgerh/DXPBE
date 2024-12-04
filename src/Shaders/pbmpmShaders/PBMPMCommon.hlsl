@@ -12,6 +12,14 @@
 #define MaterialVisco 3
 #define MaterialSnow 4
 
+#define ShapeTypeBox 0
+#define ShapeTypeCircle 1
+
+#define ShapeFunctionEmit 0
+#define ShapeFunctionCollider  1
+#define ShapeFunctionDrain  2
+#define ShapeFunctionInitialEmit  3
+
 #define TotalBukkitEdgeLength (BukkitSize + BukkitHaloSize * 2)
 #define TileDataSizePerEdge (TotalBukkitEdgeLength * 5) //4->5
 #define TileDataSize (TileDataSizePerEdge * TileDataSizePerEdge)
@@ -40,11 +48,20 @@ struct PBMPMConstants {
 	unsigned int iterationCount;
 	float borderFriction;
 
-	//plasticity for MaterialVisco, default 0.9, max 1
-	//float Plasticity;
-	
-	
+
+    //mouse stuff
+    unsigned int mouseActivation;
+    uint2 mousePosition;
+    unsigned int mouseRadius;
+    unsigned int mouseFunction;
+    unsigned int mouseVelocity;
+
 };
+
+
+// Define constants for identity and zero matrices
+static const float2x2 Identity = float2x2(1, 0, 0, 1);
+static const float2x2 ZeroMatrix = float2x2(0, 0, 0, 0);
 
 struct Particle {
 	float3 position; //2->3
@@ -66,6 +83,19 @@ struct BukkitThreadData {
 	unsigned int bukkitX;
 	unsigned int bukkitY;
 	unsigned int bukkitZ; //added Z
+};
+
+struct SimShape {
+	int id;
+	float2 position;
+	float rotation;
+	float2 halfSize;
+
+	int shapeType;
+	int functionality;
+	int material;
+	float emissionRate;
+	int radius;
 };
 
 // Helper Functions
@@ -159,4 +189,67 @@ int3 positionToBukkitId(float3 position)
 uint divUp(uint threadCount, uint groupSize)
 {
     return (threadCount + groupSize - 1) / groupSize;
+}
+
+// Collision
+
+float2x2 rot(float angle)
+{
+    float c = cos(angle);
+    float s = sin(angle);
+    return float2x2(c, -s, s, c);
+}
+
+
+
+struct CollideResult
+{
+    bool collides;
+    float penetration;
+    float2 normal;
+    float2 pointOnCollider;
+};
+
+CollideResult collide(SimShape shape, float2 pos)
+{
+    CollideResult result;
+    if (shape.shapeType == ShapeTypeCircle)
+    {
+        float2 offset = shape.position - pos;
+        float offsetLen = length(offset);
+        float2 normal = offset * (offsetLen == 0 ? 0 : 1.0 / offsetLen);
+        result.collides = offsetLen <= shape.radius;
+        result.penetration = -(offsetLen - shape.radius);
+        result.normal = normal;
+        result.pointOnCollider = shape.position + normal * shape.radius;
+    }
+    else if (shape.shapeType == ShapeTypeBox)
+    {
+        float2 offset = pos - shape.position;
+        float2x2 R = rot(shape.rotation / 180.0f * 3.14159f); // Assuming `rot` is a 2D rotation matrix function
+        float2 rotOffset = mul(R, offset); // Matrix-vector multiplication
+        float sx = sign(rotOffset.x);
+        float sy = sign(rotOffset.y);
+        float2 penetration = -(abs(rotOffset) - shape.halfSize);
+        float2 normal = mul(transpose(R), 
+            (penetration.y < penetration.x ? float2(sx, 0) : float2(0, sy)));
+
+        float minPen = min(penetration.x, penetration.y);
+
+        float2 pointOnBox = shape.position + mul(transpose(R), clamp(rotOffset, -shape.halfSize, shape.halfSize));
+
+        result.collides = minPen > 0;
+        result.penetration = minPen;
+        result.normal = -normal;
+        result.pointOnCollider = pointOnBox;
+    }
+    else
+    {
+        result.collides = false;
+        result.penetration = 0.0;
+        result.normal = float2(0, 0);
+        result.pointOnCollider = float2(0, 0);
+    }
+
+    return result;
 }

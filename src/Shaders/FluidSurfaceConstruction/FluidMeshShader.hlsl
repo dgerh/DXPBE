@@ -14,6 +14,8 @@ StructuredBuffer<float2> vertexNormals : register(t2);
 StructuredBuffer<uint3> surfaceHalfBlockDispatch : register(t3);
 // Root constants
 ConstantBuffer<MeshShadingConstants> cb : register(b0);
+// UAV
+RWStructuredBuffer<uint3> surfaceVertDensityDispatch : register(u0); // purely for resetting the buffer
 
 // Shared memory: 170 edges in a 4x4x2 halfblock, total of (1 + 3 + 2 + 4) * 4 (Bytes/word) = 40 bytes per vertex.
 // At most 170 vertices (one per edge) can be constructed -> 170 * 36 = 6.8KB shared memory per workgroup. This is well within size limits.
@@ -141,6 +143,11 @@ void main(
     out indices uint3 triangles[MAX_PRIMITIVES])
 {
     if (globalThreadId.x > surfaceHalfBlockDispatch[0].x * CELLS_PER_HALFBLOCK) return;
+
+    // Piggy back to reset the surfaceVertDensityDispatch buffer
+    if (globalThreadId.x == 0) {
+        surfaceVertDensityDispatch[0].x = 0;
+    }
 
     uint blockIdx1d = surfaceBlockIndices[globalThreadId.x / CELLS_PER_BLOCK];
     uint3 blockIdx3d = to3D(blockIdx1d, (cb.dimensions / CELLS_PER_BLOCK_EDGE) * uint3(1, 1, 1));

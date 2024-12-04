@@ -17,7 +17,7 @@ const unsigned int BukkitSize = 6;
 const unsigned int BukkitHaloSize = 1;
 const unsigned int GuardianSize = 3;
 
-const unsigned int maxParticles = 50000;
+const unsigned int maxParticles = 500000;
 const unsigned int maxTimestampCount = 2048;
 
 struct PBMPMConstants {
@@ -43,21 +43,26 @@ struct PBMPMConstants {
 	unsigned int iteration;
 	unsigned int iterationCount;
 	float borderFriction;
+
+	//mouse stuff
+	unsigned int mouseActivation;
+	XMUINT2 mousePosition;
+	unsigned int mouseRadius;
+	unsigned int mouseFunction;
+	unsigned int mouseVelocity;
 };
 
-struct ShapeFactory {
+
+struct SimShape {
+	int id;
 	XMFLOAT3 position; //2->3
-	XMFLOAT3 halfSize; //2->3
-
-	float radius;
 	float rotation;
-	float functionality;
-	float shapeType;
-
-	float emitMaterial;
+	XMFLOAT3 halfSize; //2->3
+	int shapeType;
+	int functionality;
+	int material;
 	float emissionRate;
-	float emissionSpeed;
-	float padding;
+	int radius;
 };
 
 struct PBMPMParticle {
@@ -122,6 +127,8 @@ private:
 	ComputePipeline bukkitAllocatePipeline;
 	ComputePipeline bukkitInsertPipeline;
 	ComputePipeline bufferClearPipeline;
+	ComputePipeline emissionPipeline;
+	ComputePipeline setIndirectArgsPipeline;
 
 	PBMPMConstants constants;
 	BukkitSystem bukkitSystem;
@@ -133,6 +140,7 @@ private:
 	IndexBuffer indexBuffer;
 	unsigned int instanceCount;
 	ID3D12CommandSignature* commandSignature = nullptr;
+	ID3D12CommandSignature* renderCommandSignature = nullptr;
 	UINT64 fenceValue = 1;
 	ComPointer<ID3D12Fence> fence;
 	unsigned int indexCount = 0;
@@ -144,6 +152,8 @@ private:
 	StructuredBuffer particleFreeIndicesBuffer;
 	StructuredBuffer particleCount;
 	StructuredBuffer particleSimDispatch;
+	StructuredBuffer renderDispatchBuffer;
+	StructuredBuffer shapeBuffer;
 
 	std::array<StructuredBuffer, 3> gridBuffers;
 
@@ -154,4 +164,6 @@ private:
 	void resetBuffers(bool resetGrids = false);
 
 	void bukkitizeParticles();
+
+	void doEmission(StructuredBuffer* gridBuffer);
 };

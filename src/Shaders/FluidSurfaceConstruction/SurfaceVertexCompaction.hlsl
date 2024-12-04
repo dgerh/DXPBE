@@ -15,7 +15,8 @@ RWStructuredBuffer<uint3> surfaceVertDensityDispatch : register(u1);
     Similar to SurfaceBlockDetection, this is effectively a stream compaction step. Again, instead of following the paper directly,
     which uses many atomic operations, we'll use wave intrinsics to reduce the number of atomics to one-per-wave.
 
-    This compute pass launches a thread per surface vertex. Each workgroup represents one surface block (so (N + 1)^3 vertices, or threads).
+    This compute pass launches a thread per potential surface vertex. Each workgroup is sized to match a single surface block, so the total threads are (CELLS_PER_BLOCK_EDGE + 1)^3 * surfaceBlocksDispatch[0].x.
+    Note that the threads in a single workgroup don't necessarily all map to the same surface block.
 */
 [numthreads(SURFACE_VERTEX_COMPACTION_THREADS_X, 1, 1)]
 void main(uint3 globalThreadId : SV_DispatchThreadID) {

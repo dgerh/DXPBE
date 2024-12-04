@@ -4,7 +4,7 @@
 
 // TODO: should this be a constant? If not, what happens if we change it from frame to frame? Do we have to resize and reset buffers as well?
 struct Uniforms {
-    uint3 gridCellDimensions;
+    int3 gridCellDimensions;
 };
 
 struct Cell {
@@ -35,39 +35,39 @@ groupshared uint cellParticleCounts[FILLED_BLOCK];
 groupshared uint s_surfaceVertices[(CELLS_PER_BLOCK_EDGE + 1) * (CELLS_PER_BLOCK_EDGE + 1) * (CELLS_PER_BLOCK_EDGE + 1)];
 
 // Set the 8 vertices of a surface cell cube into shared memory
-void setSharedMemSurfaceVerts(uint3 baseIndex3d, uint3 dimensions, uint value) {
-    s_surfaceVertices[to1D(baseIndex3d + uint3(0, 0, 0), dimensions)] = value;
-    s_surfaceVertices[to1D(baseIndex3d + uint3(0, 0, 1), dimensions)] = value;
-    s_surfaceVertices[to1D(baseIndex3d + uint3(0, 1, 0), dimensions)] = value;
-    s_surfaceVertices[to1D(baseIndex3d + uint3(0, 1, 1), dimensions)] = value;
-    s_surfaceVertices[to1D(baseIndex3d + uint3(1, 0, 0), dimensions)] = value;
-    s_surfaceVertices[to1D(baseIndex3d + uint3(1, 0, 1), dimensions)] = value;
-    s_surfaceVertices[to1D(baseIndex3d + uint3(1, 1, 0), dimensions)] = value;
-    s_surfaceVertices[to1D(baseIndex3d + uint3(1, 1, 1), dimensions)] = value;
+void setSharedMemSurfaceVerts(int3 baseIndex3d, int3 dimensions, uint value) {
+    s_surfaceVertices[to1D(baseIndex3d + int3(0, 0, 0), dimensions)] = value;
+    s_surfaceVertices[to1D(baseIndex3d + int3(0, 0, 1), dimensions)] = value;
+    s_surfaceVertices[to1D(baseIndex3d + int3(0, 1, 0), dimensions)] = value;
+    s_surfaceVertices[to1D(baseIndex3d + int3(0, 1, 1), dimensions)] = value;
+    s_surfaceVertices[to1D(baseIndex3d + int3(1, 0, 0), dimensions)] = value;
+    s_surfaceVertices[to1D(baseIndex3d + int3(1, 0, 1), dimensions)] = value;
+    s_surfaceVertices[to1D(baseIndex3d + int3(1, 1, 0), dimensions)] = value;
+    s_surfaceVertices[to1D(baseIndex3d + int3(1, 1, 1), dimensions)] = value;
 }
 
 // Set the 8 vertices of a surface cell cube into the output buffer
-void setGlobalSurfaceVertsToValue(uint3 globalIndex3d, uint3 globalDims, uint value) {
-    surfaceVertices[to1D(globalIndex3d + uint3(0, 0, 0), globalDims)] = value;
-    surfaceVertices[to1D(globalIndex3d + uint3(0, 0, 1), globalDims)] = value;
-    surfaceVertices[to1D(globalIndex3d + uint3(0, 1, 0), globalDims)] = value;
-    surfaceVertices[to1D(globalIndex3d + uint3(0, 1, 1), globalDims)] = value;
-    surfaceVertices[to1D(globalIndex3d + uint3(1, 0, 0), globalDims)] = value;
-    surfaceVertices[to1D(globalIndex3d + uint3(1, 0, 1), globalDims)] = value;
-    surfaceVertices[to1D(globalIndex3d + uint3(1, 1, 0), globalDims)] = value;
-    surfaceVertices[to1D(globalIndex3d + uint3(1, 1, 1), globalDims)] = value;
+void setGlobalSurfaceVertsToValue(int3 globalIndex3d, int3 globalDims, uint value) {
+    surfaceVertices[to1D(globalIndex3d + int3(0, 0, 0), globalDims)] = value;
+    surfaceVertices[to1D(globalIndex3d + int3(0, 0, 1), globalDims)] = value;
+    surfaceVertices[to1D(globalIndex3d + int3(0, 1, 0), globalDims)] = value;
+    surfaceVertices[to1D(globalIndex3d + int3(0, 1, 1), globalDims)] = value;
+    surfaceVertices[to1D(globalIndex3d + int3(1, 0, 0), globalDims)] = value;
+    surfaceVertices[to1D(globalIndex3d + int3(1, 0, 1), globalDims)] = value;
+    surfaceVertices[to1D(globalIndex3d + int3(1, 1, 0), globalDims)] = value;
+    surfaceVertices[to1D(globalIndex3d + int3(1, 1, 1), globalDims)] = value;
 }
 
 // Set the 8 vertices of a surface cell cube into the output buffer, from shared memory.
-void setGlobalSurfaceVertsFromSharedMem(uint3 globalIndex3d, uint3 globalDims, uint3 sharedIndex3d, uint3 sharedDims) {
-    surfaceVertices[to1D(globalIndex3d + uint3(0, 0, 0), globalDims)] = s_surfaceVertices[to1D(sharedIndex3d + uint3(0, 0, 0), sharedDims)];
-    surfaceVertices[to1D(globalIndex3d + uint3(0, 0, 1), globalDims)] = s_surfaceVertices[to1D(sharedIndex3d + uint3(0, 0, 1), sharedDims)];
-    surfaceVertices[to1D(globalIndex3d + uint3(0, 1, 0), globalDims)] = s_surfaceVertices[to1D(sharedIndex3d + uint3(0, 1, 0), sharedDims)];
-    surfaceVertices[to1D(globalIndex3d + uint3(0, 1, 1), globalDims)] = s_surfaceVertices[to1D(sharedIndex3d + uint3(0, 1, 1), sharedDims)];
-    surfaceVertices[to1D(globalIndex3d + uint3(1, 0, 0), globalDims)] = s_surfaceVertices[to1D(sharedIndex3d + uint3(1, 0, 0), sharedDims)];
-    surfaceVertices[to1D(globalIndex3d + uint3(1, 0, 1), globalDims)] = s_surfaceVertices[to1D(sharedIndex3d + uint3(1, 0, 1), sharedDims)];
-    surfaceVertices[to1D(globalIndex3d + uint3(1, 1, 0), globalDims)] = s_surfaceVertices[to1D(sharedIndex3d + uint3(1, 1, 0), sharedDims)];
-    surfaceVertices[to1D(globalIndex3d + uint3(1, 1, 1), globalDims)] = s_surfaceVertices[to1D(sharedIndex3d + uint3(1, 1, 1), sharedDims)];
+void setGlobalSurfaceVertsFromSharedMem(int3 globalIndex3d, int3 globalDims, int3 sharedIndex3d, int3 sharedDims) {
+    surfaceVertices[to1D(globalIndex3d + int3(0, 0, 0), globalDims)] = s_surfaceVertices[to1D(sharedIndex3d + int3(0, 0, 0), sharedDims)];
+    surfaceVertices[to1D(globalIndex3d + int3(0, 0, 1), globalDims)] = s_surfaceVertices[to1D(sharedIndex3d + int3(0, 0, 1), sharedDims)];
+    surfaceVertices[to1D(globalIndex3d + int3(0, 1, 0), globalDims)] = s_surfaceVertices[to1D(sharedIndex3d + int3(0, 1, 0), sharedDims)];
+    surfaceVertices[to1D(globalIndex3d + int3(0, 1, 1), globalDims)] = s_surfaceVertices[to1D(sharedIndex3d + int3(0, 1, 1), sharedDims)];
+    surfaceVertices[to1D(globalIndex3d + int3(1, 0, 0), globalDims)] = s_surfaceVertices[to1D(sharedIndex3d + int3(1, 0, 0), sharedDims)];
+    surfaceVertices[to1D(globalIndex3d + int3(1, 0, 1), globalDims)] = s_surfaceVertices[to1D(sharedIndex3d + int3(1, 0, 1), sharedDims)];
+    surfaceVertices[to1D(globalIndex3d + int3(1, 1, 0), globalDims)] = s_surfaceVertices[to1D(sharedIndex3d + int3(1, 1, 0), sharedDims)];
+    surfaceVertices[to1D(globalIndex3d + int3(1, 1, 1), globalDims)] = s_surfaceVertices[to1D(sharedIndex3d + int3(1, 1, 1), sharedDims)];
 }
 
 void setVertSharedMemory(uint index, uint value) {
@@ -95,9 +95,9 @@ void main(uint3 globalThreadId : SV_DispatchThreadID, uint3 localThreadId : SV_G
     // First order of business: we launched a thread for each cell within surface blocks. We need to figure out the global index for this thread's cell. 
     uint surfaceBlockIdx1d = surfaceBlockIndices[globalThreadId.x / CELLS_PER_BLOCK];
     // By aligning the number of threads per workgroup with the number of threads in a block, we can use the local thread ID as a proxy for the local cell index.
-    uint3 surfaceBlockIdx3d = to3D(surfaceBlockIdx1d, cb.gridCellDimensions / CELLS_PER_BLOCK_EDGE);
-    uint3 localCellIndex3d = to3D(localThreadId.x, CELLS_PER_BLOCK_EDGE * uint3(1, 1, 1));
-    uint3 globalCellIndex3d = surfaceBlockIdx3d * CELLS_PER_BLOCK + localCellIndex3d;
+    int3 surfaceBlockIdx3d = to3D(surfaceBlockIdx1d, cb.gridCellDimensions / CELLS_PER_BLOCK_EDGE);
+    int3 localCellIndex3d = to3D(localThreadId.x, CELLS_PER_BLOCK_EDGE * int3(1, 1, 1));
+    int3 globalCellIndex3d = surfaceBlockIdx3d * CELLS_PER_BLOCK_EDGE + localCellIndex3d;
 
     // A quick aside: using the globalCellIndex3d, reset the surface vertices buffer (from last frame) to 0
     setGlobalSurfaceVertsToValue(globalCellIndex3d, cb.gridCellDimensions + 1, 0);
@@ -105,8 +105,8 @@ void main(uint3 globalThreadId : SV_DispatchThreadID, uint3 localThreadId : SV_G
     // Prefetch and store the particle count for this cell. Since shared memory will store (N + 2)^3 cells, not just N^3 cells, in order for all cells to be contiguous,
     // we need to offset the surface block cells themselves by 1 to leave room for the extra-surface cells.
     // (Skip the cells on edges, we'll get them later)
-    uint offsetLocalCellIdx1d = to1D(localCellIndex3d + uint3(1, 1, 1), CELLS_PER_BLOCK_EDGE + 2);
-    if (all(localCellIndex3d < (CELLS_PER_BLOCK_EDGE - 1) * uint3(1, 1, 1)) && all(localCellIndex3d > uint3(0, 0, 0))) {
+    int offsetLocalCellIdx1d = to1D(localCellIndex3d + int3(1, 1, 1), CELLS_PER_BLOCK_EDGE + 2);
+    if (all(localCellIndex3d < (CELLS_PER_BLOCK_EDGE - 1) * int3(1, 1, 1)) && all(localCellIndex3d > int3(0, 0, 0))) {
         cellParticleCounts[offsetLocalCellIdx1d] = cells[globalThreadId.x].particleCount;
     }
 
@@ -114,22 +114,22 @@ void main(uint3 globalThreadId : SV_DispatchThreadID, uint3 localThreadId : SV_G
     // fetch its surrounding extra-surface cells (and itself).
     // This follows the same strategy as the bilevel uniform grid shader.
     float halfCellsPerBlockEdgeMinusOne = ((CELLS_PER_BLOCK_EDGE - 1) / 2.0);
-    uint3 edge = int3(trunc((localCellIndex3d - halfCellsPerBlockEdgeMinusOne) / halfCellsPerBlockEdgeMinusOne));
+    int3 edge = int3(trunc((localCellIndex3d - halfCellsPerBlockEdgeMinusOne) / halfCellsPerBlockEdgeMinusOne));
     // By converting neighbors to global-space here, we can clamp to the grid bounds and avoid 
     // out-of-bounds checks in every loop iteration.
-    uint3 globalNeighborCells = clamp(globalCellIndex3d + edge, uint3(0, 0, 0), cb.gridCellDimensions - 1);
-    uint3 minSearchBounds = min(globalNeighborCells, globalCellIndex3d);
-    uint3 maxSearchBounds = max(globalNeighborCells, globalCellIndex3d);
+    int3 globalNeighborCells = clamp(globalCellIndex3d + edge, int3(0, 0, 0), cb.gridCellDimensions - 1);
+    int3 minSearchBounds = min(globalNeighborCells, globalCellIndex3d);
+    int3 maxSearchBounds = max(globalNeighborCells, globalCellIndex3d);
 
-    uint3 globalNeighborCellOrigin = surfaceBlockIdx3d * CELLS_PER_BLOCK - uint3(1, 1, 1);
-    for (uint z = minSearchBounds.z; z <= maxSearchBounds.z; z++) {
-        for (uint y = minSearchBounds.y; y <= maxSearchBounds.y; y++) {
-            for (uint x = minSearchBounds.x; x <= maxSearchBounds.x; x++) {
-                uint3 globalNeighborCellIndex3d = uint3(x, y, z);
-                uint globalNeighborCellIndex1d = to1D(globalNeighborCellIndex3d, cb.gridCellDimensions);
+    int3 globalNeighborCellOrigin = surfaceBlockIdx3d * CELLS_PER_BLOCK_EDGE - int3(1, 1, 1);
+    for (int z = minSearchBounds.z; z <= maxSearchBounds.z; z++) {
+        for (int y = minSearchBounds.y; y <= maxSearchBounds.y; y++) {
+            for (int x = minSearchBounds.x; x <= maxSearchBounds.x; x++) {
+                int3 globalNeighborCellIndex3d = int3(x, y, z);
+                int globalNeighborCellIndex1d = to1D(globalNeighborCellIndex3d, cb.gridCellDimensions);
                 
-                uint3 localNeighborCellIndex3d = globalNeighborCellIndex3d - globalNeighborCellOrigin;
-                uint localNeighborCellIndex1d = to1D(localNeighborCellIndex3d, CELLS_PER_BLOCK_EDGE + 2);
+                int3 localNeighborCellIndex3d = globalNeighborCellIndex3d - globalNeighborCellOrigin;
+                int localNeighborCellIndex1d = to1D(localNeighborCellIndex3d, CELLS_PER_BLOCK_EDGE + 2);
                 
                 cellParticleCounts[localNeighborCellIndex1d] = cells[globalNeighborCellIndex1d].particleCount;
             }
@@ -139,28 +139,28 @@ void main(uint3 globalThreadId : SV_DispatchThreadID, uint3 localThreadId : SV_G
     // Now that all the memory we'll need is pulled into shared, sync it, and then process it to detect surface cells.
     GroupMemoryBarrierWithGroupSync();
 
-    // Similar trick as before to get the search bounds, but this time we're iterating over the full 3x3x3 neighboring cells (within grid bounds).
-    minSearchBounds = clamp(globalCellIndex3d - uint3(1, 1, 1), uint3(0, 0, 0), cb.gridCellDimensions - 1);
-    maxSearchBounds = clamp(globalCellIndex3d + uint3(1, 1, 1), uint3(0, 0, 0), cb.gridCellDimensions - 1);
+    // Similar trick as before to get the search bounds, but this time we're iterating over the full range of block cells (within grid bounds).
+    minSearchBounds = clamp(globalCellIndex3d - int3(1, 1, 1), int3(0, 0, 0), cb.gridCellDimensions - 1);
+    maxSearchBounds = clamp(globalCellIndex3d + int3(1, 1, 1), int3(0, 0, 0), cb.gridCellDimensions - 1);
 
     // A cell is NOT a surface cell if either:
     // 1. All of its neighbors and itself are empty
     // 2. All of its neighbors and itself are filled
     // It CAN be a surface cell EVEN if it has no particles itself.
     // As we iterate over all neighbors, if any one of them is different from the previous ones, the cell is a surface cell.
-    // To track this, initialize lastEmptyCell to the state of the current cell, from shared memory.
-    bool lastCellEmpty = (cellParticleCounts[offsetLocalCellIdx1d] == 0);
+    // To track this, initialize firstCellEmpty to the state of the current cell, from shared memory.
+    bool firstCellEmpty = (cellParticleCounts[offsetLocalCellIdx1d] == 0);
     bool isSurfaceCell = false;
-    for (uint z = minSearchBounds.z; z <= maxSearchBounds.z; z++) {
-        for (uint y = minSearchBounds.y; y <= maxSearchBounds.y; y++) {
-            for (uint x = minSearchBounds.x; x <= maxSearchBounds.x; x++) {
-                uint3 globalNeighborCellIndex3d = uint3(x, y, z);
+    for (int z = minSearchBounds.z; z <= maxSearchBounds.z; z++) {
+        for (int y = minSearchBounds.y; y <= maxSearchBounds.y; y++) {
+            for (int x = minSearchBounds.x; x <= maxSearchBounds.x; x++) {
+                int3 globalNeighborCellIndex3d = int3(x, y, z);
 
-                uint3 localNeighborCellIndex3d = globalNeighborCellIndex3d - globalNeighborCellOrigin;
-                uint localNeighborCellIndex1d = to1D(localNeighborCellIndex3d, CELLS_PER_BLOCK_EDGE + 2);
+                int3 localNeighborCellIndex3d = globalNeighborCellIndex3d - globalNeighborCellOrigin;
+                int localNeighborCellIndex1d = to1D(localNeighborCellIndex3d, CELLS_PER_BLOCK_EDGE + 2);
 
                 bool isCellEmpty = (cellParticleCounts[localNeighborCellIndex1d] == 0);
-                if (isCellEmpty != lastCellEmpty) {
+                if (isCellEmpty != firstCellEmpty) {
                     isSurfaceCell = true;
                     break;
                 };
@@ -176,11 +176,11 @@ void main(uint3 globalThreadId : SV_DispatchThreadID, uint3 localThreadId : SV_G
 
     // Initialize the shared memory to all 0s, then only write to it if isSurfaceCell.
     // We write to shared memory first because cells can share vertices, so this saves on duplicate global writes.
-    setSharedMemSurfaceVerts(localCellIndex3d, (CELLS_PER_BLOCK_EDGE + 1) * uint3(1, 1, 1), 0);
+    setSharedMemSurfaceVerts(localCellIndex3d, (CELLS_PER_BLOCK_EDGE + 1) * int3(1, 1, 1), 0);
     GroupMemoryBarrierWithGroupSync();
 
     if (isSurfaceCell) {
-        setSharedMemSurfaceVerts(localCellIndex3d, (CELLS_PER_BLOCK_EDGE + 1) * uint3(1, 1, 1), 1);
+        setSharedMemSurfaceVerts(localCellIndex3d, (CELLS_PER_BLOCK_EDGE + 1) * int3(1, 1, 1), 1);
     }
     GroupMemoryBarrierWithGroupSync();
 

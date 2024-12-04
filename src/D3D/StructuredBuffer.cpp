@@ -206,15 +206,6 @@ void StructuredBuffer::passDataToGPU(DXContext& context, ID3D12GraphicsCommandLi
     }
 
     context.resetCommandList(cmdId);
-
-    D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-    srvDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
-    srvDesc.Format = DXGI_FORMAT_UNKNOWN;
-    srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-    srvDesc.Buffer.FirstElement = 0;
-    srvDesc.Buffer.NumElements = numElements;
-    srvDesc.Buffer.StructureByteStride = elementSize;
-
 }
 
 void StructuredBuffer::createUAV(DXContext& context, DescriptorHeap* dh) {

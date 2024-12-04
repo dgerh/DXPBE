@@ -61,6 +61,7 @@ float tr(float2x2 m)
     return m[0][0] + m[1][1];
 }
 
+
 // Function to compute the trace of a 3x3 matrix
 float tr3D(float3x3 m) {
     return m[0][0] + m[1][1] + m[2][2];
@@ -125,7 +126,6 @@ float3x3 inverse(float3x3 m) {
     adj[2][1] = -(m[0][0] * m[2][1] - m[2][0] * m[0][1]);
     adj[2][2] = +(m[0][0] * m[1][1] - m[1][0] * m[0][1]);
     return adj * (1.0 / d);
-}
 
 float3x3 outerProduct(float3 x, float3 y) {
     return float3x3(
@@ -170,6 +170,7 @@ float4x4 expandToFloat4x4(float3x3 m)
         0.0, 0.0, 0.0, 0.0
     );
 }
+
 
 struct SVDResult
 {
@@ -293,6 +294,7 @@ SVDResult svd(float3x3 A) {
     return result;
 }
 
+
 [numthreads(ParticleDispatchSize, 1, 1)]
 void main(uint indexInGroup : SV_GroupIndex, uint3 groupId : SV_GroupID)
 {
@@ -389,6 +391,9 @@ void main(uint indexInGroup : SV_GroupIndex, uint3 groupId : SV_GroupID)
     InterlockedExchange(s_tileDataDst[tileDataIndex + 2], 0, originalValue);
     InterlockedExchange(s_tileDataDst[tileDataIndex + 3], 0, originalValue);
     InterlockedExchange(s_tileDataDst[tileDataIndex + 4], 0, originalValue);
+
+
+
     // Synchronize all threads in the group
     GroupMemoryBarrierWithGroupSync();
     
@@ -607,6 +612,26 @@ void main(uint indexInGroup : SV_GroupIndex, uint3 groupId : SV_GroupID)
                 particle.position += particle.displacement;
 
                 // Mouse Iteraction Here
+
+                if (g_simConstants.mouseActivation > 0)
+                {
+                    float2 offset = particle.position - g_simConstants.mousePosition;
+                    float lenOffset = max(length(offset), 0.0001);
+                    if (lenOffset < g_simConstants.mouseRadius)
+                    {
+                        float2 normOffset = offset / lenOffset;
+
+                        if (g_simConstants.mouseFunction == 0)
+                        {
+                            particle.displacement += normOffset * 500.f;
+                        }
+                        else if (g_simConstants.mouseFunction == 1)
+                        {
+                            particle.displacement = g_simConstants.mouseVelocity * g_simConstants.deltaTime;
+                        }
+                    }
+                }
+                
 
                 // Gravity Acceleration is normalized to the vertical size of the window
                 particle.displacement.y -= float(g_simConstants.gridSize.y) * g_simConstants.gravityStrength * g_simConstants.deltaTime * g_simConstants.deltaTime * g_simConstants.deltaTime;
