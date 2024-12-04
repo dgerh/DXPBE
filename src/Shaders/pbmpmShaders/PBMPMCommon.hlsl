@@ -86,16 +86,16 @@ struct BukkitThreadData {
 };
 
 struct SimShape {
-	int id;
-	float2 position;
-	float rotation;
-	float2 halfSize;
+    int id;
+    float3 position;
+    float rotation;
+    float3 halfSize;
 
-	int shapeType;
-	int functionality;
-	int material;
-	float emissionRate;
-	int radius;
+    int shapeType;
+    int functionality;
+    int material;
+    float emissionRate;
+    int radius;
 };
 
 // Helper Functions

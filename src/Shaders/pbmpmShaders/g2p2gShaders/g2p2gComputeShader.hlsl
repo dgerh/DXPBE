@@ -103,14 +103,7 @@ float3x3 rot3D(float3 angles) // angles in radians (x, y, z)
     return mul(rotZ(angles.z), mul(rotY(angles.y), rotX(angles.x)));
 }
 
-// Function to create a 2x2 rotation matrix
-float2x2 rot(float theta)
-{
-    float ct = cos(theta);
-    float st = sin(theta);
 
-    return float2x2(ct, st, -st, ct);
-}
 
 // Function to compute the inverse of a 3x3 matrix
 float3x3 inverse(float3x3 m) {

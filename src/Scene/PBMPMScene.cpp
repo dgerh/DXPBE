@@ -269,11 +269,7 @@ void PBMPMScene::bukkitizeParticles() {
 	bukkitCountPipeline.getCommandList()->ResourceBarrier(1, &particleBufferBarrier);
 
 	// Properly set the Descriptors & Resource Transitions
-<<<<<<< HEAD
-	bukkitCountPipeline.getCommandList()->SetComputeRoot32BitConstants(0, 20, &constants, 0);
-=======
 	bukkitCountPipeline.getCommandList()->SetComputeRoot32BitConstants(0, 24, &constants, 0);
->>>>>>> origin/main
 	bukkitCountPipeline.getCommandList()->SetComputeRootDescriptorTable(1, particleCount.getSRVGPUDescriptorHandle());
 	bukkitCountPipeline.getCommandList()->SetComputeRootDescriptorTable(2, particleBuffer.getSRVGPUDescriptorHandle());
 	bukkitCountPipeline.getCommandList()->SetComputeRootDescriptorTable(3, bukkitSystem.countBuffer.getUAVGPUDescriptorHandle());
@@ -318,11 +314,7 @@ void PBMPMScene::bukkitizeParticles() {
 	bukkitAllocatePipeline.getCommandList()->ResourceBarrier(1, &bukkitCountBarrier);
 
 	// Properly set the Descriptors & Resource Transitions
-<<<<<<< HEAD
-	bukkitAllocatePipeline.getCommandList()->SetComputeRoot32BitConstants(0, 20, &constants, 0);
-=======
 	bukkitAllocatePipeline.getCommandList()->SetComputeRoot32BitConstants(0, 24, &constants, 0);
->>>>>>> origin/main
 	bukkitAllocatePipeline.getCommandList()->SetComputeRootDescriptorTable(1, bukkitSystem.countBuffer.getSRVGPUDescriptorHandle());
 	bukkitAllocatePipeline.getCommandList()->SetComputeRootDescriptorTable(2, bukkitSystem.threadData.getUAVGPUDescriptorHandle());
 
@@ -378,11 +370,7 @@ void PBMPMScene::bukkitizeParticles() {
 	bukkitInsertPipeline.getCommandList()->ResourceBarrier(3, barriers);
 
 	// Properly set the Descriptors
-<<<<<<< HEAD
-	bukkitInsertPipeline.getCommandList()->SetComputeRoot32BitConstants(0, 20, &constants, 0);
-=======
 	bukkitInsertPipeline.getCommandList()->SetComputeRoot32BitConstants(0, 24, &constants, 0);
->>>>>>> origin/main
 	bukkitInsertPipeline.getCommandList()->SetComputeRootDescriptorTable(1, particleBuffer.getSRVGPUDescriptorHandle());
 	bukkitInsertPipeline.getCommandList()->SetComputeRootDescriptorTable(2, bukkitSystem.countBuffer2.getUAVGPUDescriptorHandle());
 	bukkitInsertPipeline.getCommandList()->SetComputeRootDescriptorTable(3, bukkitSystem.indexStart.getSRVGPUDescriptorHandle());
@@ -428,17 +416,9 @@ void PBMPMScene::constructScene() {
 	auto computeId = g2p2gPipeline.getCommandListID();
 
 	// Create Constant Data
-<<<<<<< HEAD
 	constants = { {512, 512, 512}, 0.01, 2.5, 1.5, 0.01,
 		(unsigned int)std::ceil(std::pow(10, 7)),
-		1, 4, 30, 0, 0,  0, 0, 0, 0, 0, 5, 0.9 };
-
-	float radius = 0.005;
-	float spacing = radius * 2.1;
-=======
-	constants = { {512, 512}, 0.002, 2.5, 1.5, 0.2,
-		(unsigned int)std::ceil(std::pow(10, 7)),
-		1, 4, 30, 1, 0,  0, 0, 0, 0, 10, 0.9 };
+		1, 4, 30, 1, 0, 0, 0, 0, 0, 0, 10, 0.9 };
 
 	// Create Model Matrix
 	modelMat *= XMMatrixTranslation(0.0f, 0.0f, 0.0f);
@@ -448,49 +428,16 @@ void PBMPMScene::constructScene() {
 	auto circleData = generateCircle(radius, 32);
 	indexCount = (unsigned int)circleData.second.size();
 	//float spacing = radius * 2.1;
->>>>>>> origin/main
 
 	//int particlesPerRow = (int)sqrt(instanceCount);
 	//int particlesPerCol = (instanceCount - 1) / particlesPerRow + 1;
 
-	float gridSize = 512.0f;
-	float guardianOffset = GuardianSize + 1.0f;
-	float usableGridSize = gridSize - 2 * guardianOffset;
-	float scalingFactor = usableGridSize / particlesPerRow;
-
+	
 
 	std::vector<PBMPMParticle> particles;
 	particles.resize(maxParticles);
 	// Uniform for each particle for now
-<<<<<<< HEAD
-	const float density = 1.f;
-	const float volume = 1.f / float(constants.particlesPerCellAxis * constants.particlesPerCellAxis * constants.particlesPerCellAxis);
-	// Create initial particle data
-	for (int i = 0; i < instanceCount; ++i) {
 
-		/*float x = ((i % particlesPerRow) * spacing * scalingFactor) + guardianOffset;
-		float y = ((i / particlesPerRow) * spacing * scalingFactor) + guardianOffset;
-		float z = guardianOffset;
-		XMFLOAT3 position = { x, y, z };*/
-
-		XMFLOAT3 position ={ (((i % particlesPerRow) * spacing - (particlesPerRow - 1) * spacing / 2.f) + 0.4f) * 500,
-							  (((i / particlesPerRow) * spacing - (particlesPerCol - 1) * spacing / 2.f) + 0.4f) * 500, 0.f};
-		particles[i] = {position, 1.0, {0.f, 0.f, 0.f}, density * volume, 4, volume, 0.0, 1.0, 1.0,
-						{ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0 },
-						{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 } };
-
-	}
-=======
-	//const float density = 1.f;
-	//const float volume = 1.f / float(constants.particlesPerCellAxis * constants.particlesPerCellAxis);
-	//// Create initial particle data
-	//for (int i = 0; i < instanceCount; ++i) {
-	//	XMFLOAT2 position ={ (((i % particlesPerRow) * spacing - (particlesPerRow - 1) * spacing / 2.f) + 0.4f) * 500,
-	//						  (((i / particlesPerRow) * spacing - (particlesPerCol - 1) * spacing / 2.f) + 0.4f) * 500 , };
-	//	particles[i] = { position, {0.f, 0.f}, {1.f, 0.f, 0.f, 1.f}, {0.f, 0.f, 0.f, 0.f}, 
-	//					1.0, density*volume, 0, volume, 0.0, 1.0, 1.0};
-	//}
->>>>>>> origin/main
 
 	particleBuffer = StructuredBuffer(particles.data(), particles.size(), sizeof(PBMPMParticle));
 	
@@ -499,17 +446,7 @@ void PBMPMScene::constructScene() {
 
 	XMUINT4 count = { 0, 0, 0, 0 };
 
-<<<<<<< HEAD
-	// Add particles
-	for (int i = 0; i < instanceCount; i++) {
-		freeIndices[0]--;
-		if (freeIndices[0] < 0) {
-			count.x++;
-		}
-	}
 
-=======
->>>>>>> origin/main
 	particleCount = StructuredBuffer(&count, 1, sizeof(XMUINT4));
 	particleFreeIndicesBuffer = StructuredBuffer(freeIndices.data(), freeIndices.size(), sizeof(int));
 	
@@ -528,7 +465,7 @@ void PBMPMScene::constructScene() {
 
 	// Shape Buffer
 	std::vector<SimShape> shapes;
-	shapes.push_back(SimShape(0, { 200, 200, }, 0, { 50, 50 },
+	shapes.push_back(SimShape(0, { 50, 50, 50 }, 0, { 10, 10, 10 },
 		0, 3, 0, 1, 100));
 	shapeBuffer = StructuredBuffer(shapes.data(), shapes.size(), sizeof(SimShape));
 
@@ -568,18 +505,12 @@ void PBMPMScene::constructScene() {
 	gridBuffers[1].createSRV(*context, g2p2gPipeline.getDescriptorHeap());
 	gridBuffers[2].createSRV(*context, g2p2gPipeline.getDescriptorHeap());
 
-<<<<<<< HEAD
-	// Create Vertex & Index Buffer
-	auto sphereData = generateSphere(radius, 16, 16);
-	indexCount = (unsigned int)sphereData.second.size();
 
-	vertexBuffer = VertexBuffer(sphereData.first, (UINT)(sphereData.first.size() * sizeof(XMFLOAT3)), (UINT)sizeof(XMFLOAT3));
-=======
 	vertexBuffer = VertexBuffer(circleData.first, (UINT)(circleData.first.size() * sizeof(XMFLOAT3)), (UINT)sizeof(XMFLOAT3));
->>>>>>> origin/main
+
 	vbv = vertexBuffer.passVertexDataToGPU(*context, renderPipeline->getCommandList());
 
-	indexBuffer = IndexBuffer(sphereData.second, (UINT)(sphereData.second.size() * sizeof(unsigned int)));
+	indexBuffer = IndexBuffer(circleData.second, (UINT)(circleData.second.size() * sizeof(unsigned int)));
 	ibv = indexBuffer.passIndexDataToGPU(*context, renderPipeline->getCommandList());
 
 	//Transition both buffers to their usable states
@@ -651,9 +582,7 @@ void PBMPMScene::compute() {
 		// Update simulation uniforms
 		constants.iteration = 0;
 		updateSimUniforms(0);
-		
-<<<<<<< HEAD
-=======
+
 		// Copy particle data from the GPU
 		//std::vector<PBMPMParticle> particles;
 		//particles.resize(maxParticles);
@@ -677,21 +606,15 @@ void PBMPMScene::compute() {
 		StructuredBuffer* nextGrid = &gridBuffers[1];
 		StructuredBuffer* nextNextGrid = &gridBuffers[2];
 
->>>>>>> origin/main
+
 		for (int iterationIdx = 0; iterationIdx < constants.iterationCount; iterationIdx++) {
 			constants.iteration = iterationIdx;
 
 			updateSimUniforms(iterationIdx);
 
-<<<<<<< HEAD
-			StructuredBuffer* currentGrid = &gridBuffers[bufferIdx];
-			StructuredBuffer* nextGrid = &gridBuffers[(bufferIdx + 1) % 3];
-			StructuredBuffer* nextNextGrid = &gridBuffers[(bufferIdx + 2) % 3];
-			bufferIdx = (bufferIdx + 1) % 3;
-=======
+
 			std::swap(currentGrid, nextGrid);
-			std::swap(nextGrid, nextNextGrid);
->>>>>>> origin/main
+
 
 			auto cmdList = g2p2gPipeline.getCommandList();
 
@@ -708,11 +631,9 @@ void PBMPMScene::compute() {
 			cmdList->SetPipelineState(g2p2gPipeline.getPSO());
 			cmdList->SetComputeRootSignature(g2p2gPipeline.getRootSignature());
 
-<<<<<<< HEAD
-			g2p2gPipeline.getCommandList()->SetComputeRoot32BitConstants(0, 20, &constants, 0);
-=======
+
 			g2p2gPipeline.getCommandList()->SetComputeRoot32BitConstants(0, 24, &constants, 0);
->>>>>>> origin/main
+
 
 			ID3D12DescriptorHeap* computeDescriptorHeaps[] = { g2p2gPipeline.getDescriptorHeap()->Get() };
 			cmdList->SetDescriptorHeaps(_countof(computeDescriptorHeaps), computeDescriptorHeaps);
@@ -804,8 +725,7 @@ void PBMPMScene::draw(Camera* cam) {
 	srvBarrier = CD3DX12_RESOURCE_BARRIER::Transition(particleBuffer.getBuffer(),
 		D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 	cmdList->ResourceBarrier(1, &srvBarrier);
-<<<<<<< HEAD
-=======
+
 
 	auto indirectBarrierBack = CD3DX12_RESOURCE_BARRIER::Transition(
 		renderDispatchBuffer.getBuffer(),
@@ -819,7 +739,7 @@ void PBMPMScene::draw(Camera* cam) {
 	//context->signalAndWaitForFence(fence, fenceValue);
 	//context->resetCommandList(renderPipeline->getCommandListID());
 
->>>>>>> origin/main
+
 }
 
 void PBMPMScene::releaseResources() {
@@ -865,13 +785,12 @@ void PBMPMScene::updateConstants(PBMPMConstants& newConstants) {
 	constants.particlesPerCellAxis = newConstants.particlesPerCellAxis;
 	constants.frictionAngle = newConstants.frictionAngle;
 	constants.borderFriction = newConstants.borderFriction;
-<<<<<<< HEAD
-=======
+
 	constants.mouseActivation = newConstants.mouseActivation;
 	constants.mousePosition = newConstants.mousePosition;
 	constants.mouseRadius = newConstants.mouseRadius;
 	constants.mouseFunction = newConstants.mouseFunction;
->>>>>>> origin/main
+
 }
 
 bool PBMPMScene::constantsEqual(PBMPMConstants& one, PBMPMConstants& two) {
