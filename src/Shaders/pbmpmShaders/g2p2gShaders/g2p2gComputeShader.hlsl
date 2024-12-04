@@ -604,18 +604,17 @@ void main(uint indexInGroup : SV_GroupIndex, uint3 groupId : SV_GroupID)
                 }
                 
                 // Update particle position
-                
-                
+                particle.position += particle.displacement;
+
                 // Mouse Iteraction Here
-                
+
                 // Gravity Acceleration is normalized to the vertical size of the window
-                // 
-                particle.displacement.y -= float(g_simConstants.gridSize.y) * g_simConstants.gravityStrength * g_simConstants.deltaTime * g_simConstants.deltaTime;
-                
+                particle.displacement.y -= float(g_simConstants.gridSize.y) * g_simConstants.gravityStrength * g_simConstants.deltaTime * g_simConstants.deltaTime * g_simConstants.deltaTime;
+
                 // Free count may be negative because of emission. So make sure it is at last zero before incrementing.
                 int originalMax; // Needed for InterlockedMax output parameter
-                InterlockedMax(g_freeIndices[0], 0, originalMax); 
-                
+                InterlockedMax(g_freeIndices[0], 0, originalMax);
+
                 particle.position = projectInsideGuardian(particle.position, g_simConstants.gridSize, GuardianSize);
             }
             
@@ -777,7 +776,8 @@ void main(uint indexInGroup : SV_GroupIndex, uint3 groupId : SV_GroupID)
                         float3 offset = float3(neighborCellIndex) - p + 0.5;
 
                         float weightedMass = weight * particle.mass;
-                        float3 momentum = weightedMass * (particle.displacement + mul(particle.deformationDisplacement, offset));
+                        float3 momentum = weightedMass * (particle.displacement +
+                            mul((float3x3)particle.deformationDisplacement, offset));
                         //float3 momentum = weightedMass * mul(particle.deformationDisplacement, offset);
 
                         InterlockedAdd(s_tileDataDst[gridVertexIdx + 0], encodeFixedPoint(momentum.x, g_simConstants.fixedPointMultiplier));

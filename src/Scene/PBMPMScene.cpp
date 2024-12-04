@@ -359,14 +359,14 @@ void PBMPMScene::constructScene() {
 	// Create initial particle data
 	for (int i = 0; i < instanceCount; ++i) {
 
-		float x = ((i % particlesPerRow) * spacing * scalingFactor) + guardianOffset;
+		/*float x = ((i % particlesPerRow) * spacing * scalingFactor) + guardianOffset;
 		float y = ((i / particlesPerRow) * spacing * scalingFactor) + guardianOffset;
 		float z = guardianOffset;
-		XMFLOAT3 position = { x, y, z };
+		XMFLOAT3 position = { x, y, z };*/
 
-		/*XMFLOAT3 position ={ (((i % particlesPerRow) * spacing - (particlesPerRow - 1) * spacing / 2.f) + 0.4f) * 500,
-							  (((i / particlesPerRow) * spacing - (particlesPerCol - 1) * spacing / 2.f) + 0.4f) * 500, 0.f};*/
-		particles[i] = {position, 1.0, {0.f, 0.f, 0.f}, density * volume, 0, volume, 0.0, 1.0, 1.0,
+		XMFLOAT3 position ={ (((i % particlesPerRow) * spacing - (particlesPerRow - 1) * spacing / 2.f) + 0.4f) * 500,
+							  (((i / particlesPerRow) * spacing - (particlesPerCol - 1) * spacing / 2.f) + 0.4f) * 500, 0.f};
+		particles[i] = {position, 1.0, {0.f, 0.f, 0.f}, density * volume, 4, volume, 0.0, 1.0, 1.0,
 						{ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0 },
 						{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 } };
 
