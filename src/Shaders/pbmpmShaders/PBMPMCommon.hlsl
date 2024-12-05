@@ -20,7 +20,7 @@
 #define ShapeFunctionInitialEmit  3
 
 #define TotalBukkitEdgeLength (BukkitSize + BukkitHaloSize * 2)
-#define TileDataSizePerEdge (TotalBukkitEdgeLength * 4)
+#define TileDataSizePerEdge (TotalBukkitEdgeLength * 3)
 #define TileDataSize (TileDataSizePerEdge * TileDataSizePerEdge)
 
 struct PBMPMConstants {
