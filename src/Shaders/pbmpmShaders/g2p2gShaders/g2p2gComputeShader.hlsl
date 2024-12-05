@@ -34,6 +34,10 @@ unsigned int localGridIndex(uint2 index) {
 	return (index.y * TotalBukkitEdgeLength + index.x) * 3;
 }
 
+unsigned int localVolumeGridIndex(uint2 index) {
+    return (index.y * TotalBukkitEdgeLength + index.x) * 2;
+}
+
 // Function to clamp a particle's position inside the guardian region of the grid
 float2 projectInsideGuardian(float2 p, uint2 gridSize, float guardianSize)
 {
@@ -219,12 +223,14 @@ void main(uint indexInGroup : SV_GroupIndex, uint3 groupId : SV_GroupID)
     InterlockedExchange(s_tileData[tileDataIndex + 1], encodeFixedPoint(dy, g_simConstants.fixedPointMultiplier), originalValue);
     InterlockedExchange(s_tileData[tileDataIndex + 2], encodeFixedPoint(w, g_simConstants.fixedPointMultiplier), originalValue);
     //InterlockedExchange(s_tileData[tileDataIndex + 3], encodeFixedPoint(v, g_simConstants.fixedPointMultiplier), originalValue);
+    InterlockedExchange(g_gridToBeCleared[(groupId.x * VolumeTileDataSize * 2) + tileDataIndex], encodeFixedPoint(v, g_simConstants.fixedPointMultiplier), originalValue);
     
     // Make sure all values in destination grid are 0
     InterlockedExchange(s_tileDataDst[tileDataIndex], 0, originalValue);
     InterlockedExchange(s_tileDataDst[tileDataIndex + 1], 0, originalValue);
     InterlockedExchange(s_tileDataDst[tileDataIndex + 2], 0, originalValue);
     //InterlockedExchange(s_tileDataDst[tileDataIndex + 3], 0, originalValue);
+    InterlockedExchange(g_gridToBeCleared[(groupId.x * VolumeTileDataSize * 2) + VolumeTileDataSize + tileDataIndex], 0, originalValue);
 
     // Synchronize all threads in the group
     GroupMemoryBarrierWithGroupSync();
@@ -280,6 +286,7 @@ void main(uint indexInGroup : SV_GroupIndex, uint3 groupId : SV_GroupID)
                     {
                         int fixedPoint3;
                         //InterlockedAdd(s_tileData[gridVertexIdx + 3], 0, fixedPoint3);
+                        InterlockedAdd(g_gridToBeCleared[(groupId.x * VolumeTileDataSize * 2) + gridVertexIdx], 0, fixedPoint3);
                         volume += weight * decodeFixedPoint(fixedPoint3, g_simConstants.fixedPointMultiplier);
                     }
                 }
@@ -405,6 +412,7 @@ void main(uint indexInGroup : SV_GroupIndex, uint3 groupId : SV_GroupID)
                     if (g_simConstants.useGridVolumeForLiquid != 0)
                     {
                         //InterlockedAdd(s_tileDataDst[gridVertexIdx + 3], encodeFixedPoint(weight * particle.volume, g_simConstants.fixedPointMultiplier));
+                        InterlockedAdd(g_gridToBeCleared[(groupId.x * VolumeTileDataSize * 2) + VolumeTileDataSize + gridVertexIdx], encodeFixedPoint(weight * particle.volume, g_simConstants.fixedPointMultiplier));
                     }
                 }
 
@@ -427,18 +435,21 @@ void main(uint indexInGroup : SV_GroupIndex, uint3 groupId : SV_GroupID)
         InterlockedAdd(s_tileDataDst[tileDataIndex + 1], 0, dyi);
         InterlockedAdd(s_tileDataDst[tileDataIndex + 2], 0, wi);
         //InterlockedAdd(s_tileDataDst[tileDataIndex + 3], 0, vi);
+        InterlockedAdd(g_gridToBeCleared[(groupId.x * VolumeTileDataSize * 2) + VolumeTileDataSize + tileDataIndex], 0, vi);
 
     // Atomic adds to the destination buffer
         InterlockedAdd(g_gridDst[gridVertexAddress + 0], dxi);
         InterlockedAdd(g_gridDst[gridVertexAddress + 1], dyi);
         InterlockedAdd(g_gridDst[gridVertexAddress + 2], wi);
-        //InterlockedAdd(g_gridDst[gridVertexAddress + 3], vi);
+        InterlockedAdd(g_gridDst[gridVertexAddress + 3], vi);
     
     // Clear the entries in g_gridToBeCleared
         g_gridToBeCleared[gridVertexAddress + 0] = 0;
         g_gridToBeCleared[gridVertexAddress + 1] = 0;
         g_gridToBeCleared[gridVertexAddress + 2] = 0;
         g_gridToBeCleared[gridVertexAddress + 3] = 0;
+        g_gridToBeCleared[(groupId.x * VolumeTileDataSize * 2) + VolumeTileDataSize + tileDataIndex] = 0;
+        g_gridToBeCleared[(groupId.x * VolumeTileDataSize * 2) + tileDataIndex] = 0;
     }
 
 }

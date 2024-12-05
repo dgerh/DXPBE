@@ -21,6 +21,7 @@
 
 #define TotalBukkitEdgeLength (BukkitSize + BukkitHaloSize * 2)
 #define TileDataSizePerEdge (TotalBukkitEdgeLength * 3)
+#define VolumeTileDataSize (TotalBukkitEdgeLength * 2 * TotalBukkitEdgeLength * 2)
 #define TileDataSize (TileDataSizePerEdge * TileDataSizePerEdge)
 
 struct PBMPMConstants {

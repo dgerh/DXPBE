@@ -414,7 +414,7 @@ void PBMPMScene::constructScene() {
 	// Create Constant Data
 	constants = { {512, 512}, 0.002, 2.5, 1.5, 0.2,
 		(unsigned int)std::ceil(std::pow(10, 7)),
-		0, 4, 30, 1, 0,  0, 0, 0, 0, 10, 0.9 };
+		1, 4, 30, 1, 0,  0, 0, 0, 0, 10, 0.9 };
 
 	// Create Model Matrix
 	modelMat *= XMMatrixTranslation(0.0f, 0.0f, 0.0f);
