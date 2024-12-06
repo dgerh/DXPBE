@@ -476,6 +476,7 @@ void PBMPMScene::constructScene() {
 		std::ceil(constants.gridSize.y / BukkitSize) * 10 * 4 *
 		TileDataSize);
 	tempTileDataBuffer = StructuredBuffer(tileData.data(), tileData.size(), sizeof(int));
+	tempTileDataDstBuffer = StructuredBuffer(tileData.data(), tileData.size(), sizeof(int));
 
 	// Pass Structured Buffers to Compute Pipeline
 	particleBuffer.passDataToGPU(*context, g2p2gPipeline.getCommandList(), computeId);
@@ -485,6 +486,7 @@ void PBMPMScene::constructScene() {
 	renderDispatchBuffer.passDataToGPU(*context, g2p2gPipeline.getCommandList(), computeId);
 	shapeBuffer.passCBVDataToGPU(*context, g2p2gPipeline.getDescriptorHeap());
 	tempTileDataBuffer.passDataToGPU(*context, g2p2gPipeline.getCommandList(), computeId);
+	tempTileDataDstBuffer.passDataToGPU(*context, g2p2gPipeline.getCommandList(), computeId);
 
 	// Create UAV's for each buffer
 	particleBuffer.createUAV(*context, g2p2gPipeline.getDescriptorHeap());
@@ -493,6 +495,7 @@ void PBMPMScene::constructScene() {
 	particleSimDispatch.createUAV(*context, g2p2gPipeline.getDescriptorHeap());
 	renderDispatchBuffer.createUAV(*context, g2p2gPipeline.getDescriptorHeap());
 	tempTileDataBuffer.createUAV(*context, g2p2gPipeline.getDescriptorHeap());
+	tempTileDataDstBuffer.createUAV(*context, g2p2gPipeline.getDescriptorHeap());
 
 	// Create SRV's for particleBuffer & particleCount
 	particleBuffer.createSRV(*context, g2p2gPipeline.getDescriptorHeap());
@@ -806,6 +809,8 @@ void PBMPMScene::releaseResources() {
 	particleSimDispatch.releaseResources();
 	renderDispatchBuffer.releaseResources();
 	shapeBuffer.releaseResources();
+	tempTileDataBuffer.releaseResources();
+	tempTileDataDstBuffer.releaseResources();
 	for (int i = 0; i < 3; i++) {
 		gridBuffers[i].releaseResources();
 	}

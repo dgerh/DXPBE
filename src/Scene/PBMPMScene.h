@@ -158,6 +158,7 @@ private:
 	StructuredBuffer renderDispatchBuffer;
 	StructuredBuffer shapeBuffer;
 	StructuredBuffer tempTileDataBuffer;
+	StructuredBuffer tempTileDataDstBuffer;
 
 	std::array<StructuredBuffer, 3> gridBuffers;
 
