@@ -470,6 +470,13 @@ void PBMPMScene::constructScene() {
 		0, 3, 0, 1, 100));
 	shapeBuffer = StructuredBuffer(shapes.data(), shapes.size(), sizeof(SimShape));
 
+	// tempTileData Buffer
+	std::vector<int> tileData;
+	tileData.resize(std::ceil(constants.gridSize.x / BukkitSize) * 
+		std::ceil(constants.gridSize.y / BukkitSize) * 10 * 4 *
+		TileDataSize);
+	tempTileDataBuffer = StructuredBuffer(tileData.data(), tileData.size(), sizeof(int));
+
 	// Pass Structured Buffers to Compute Pipeline
 	particleBuffer.passDataToGPU(*context, g2p2gPipeline.getCommandList(), computeId);
 	particleFreeIndicesBuffer.passDataToGPU(*context, g2p2gPipeline.getCommandList(), computeId);
@@ -477,6 +484,7 @@ void PBMPMScene::constructScene() {
 	particleSimDispatch.passDataToGPU(*context, g2p2gPipeline.getCommandList(), computeId);
 	renderDispatchBuffer.passDataToGPU(*context, g2p2gPipeline.getCommandList(), computeId);
 	shapeBuffer.passCBVDataToGPU(*context, g2p2gPipeline.getDescriptorHeap());
+	tempTileDataBuffer.passDataToGPU(*context, g2p2gPipeline.getCommandList(), computeId);
 
 	// Create UAV's for each buffer
 	particleBuffer.createUAV(*context, g2p2gPipeline.getDescriptorHeap());
@@ -484,7 +492,8 @@ void PBMPMScene::constructScene() {
 	particleCount.createUAV(*context, g2p2gPipeline.getDescriptorHeap());
 	particleSimDispatch.createUAV(*context, g2p2gPipeline.getDescriptorHeap());
 	renderDispatchBuffer.createUAV(*context, g2p2gPipeline.getDescriptorHeap());
-	
+	tempTileDataBuffer.createUAV(*context, g2p2gPipeline.getDescriptorHeap());
+
 	// Create SRV's for particleBuffer & particleCount
 	particleBuffer.createSRV(*context, g2p2gPipeline.getDescriptorHeap());
 	particleCount.createSRV(*context, g2p2gPipeline.getDescriptorHeap());
@@ -647,6 +656,7 @@ void PBMPMScene::compute() {
 			cmdList->SetComputeRootDescriptorTable(3, currentGrid->getSRVGPUDescriptorHandle());
 			cmdList->SetComputeRootDescriptorTable(4, nextGrid->getUAVGPUDescriptorHandle());
 			cmdList->SetComputeRootDescriptorTable(5, nextNextGrid->getUAVGPUDescriptorHandle());
+			cmdList->SetComputeRootDescriptorTable(6, tempTileDataBuffer.getUAVGPUDescriptorHandle());
 
 			// Transition dispatch buffer to an indirect argument
 			auto dispatchBarrier = CD3DX12_RESOURCE_BARRIER::Transition(bukkitSystem.dispatch.getBuffer(),
