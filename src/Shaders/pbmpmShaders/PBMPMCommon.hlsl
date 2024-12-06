@@ -2,7 +2,7 @@
 
 #define ParticleDispatchSize 64
 #define GridDispatchSize 8
-#define BukkitSize 2
+#define BukkitSize 6
 #define BukkitHaloSize 1
 #define GuardianSize 3
 

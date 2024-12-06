@@ -13,12 +13,16 @@
 
 const unsigned int ParticleDispatchSize = 64;
 const unsigned int GridDispatchSize = 8;
-const unsigned int BukkitSize = 2;
+const unsigned int BukkitSize = 6;
 const unsigned int BukkitHaloSize = 1;
 const unsigned int GuardianSize = 3;
 
 const unsigned int maxParticles = 500000;
 const unsigned int maxTimestampCount = 2048;
+
+const unsigned int TotalBukkitEdgeLength = BukkitSize + BukkitHaloSize * 2;
+const unsigned int TileDataSizePerEdge = TotalBukkitEdgeLength * 5;
+const unsigned int TileDataSize = TileDataSizePerEdge * TileDataSizePerEdge * TileDataSizePerEdge;
 
 struct PBMPMConstants {
 	XMUINT3 gridSize; //2 -> 3
@@ -154,6 +158,8 @@ private:
 	StructuredBuffer particleSimDispatch;
 	StructuredBuffer renderDispatchBuffer;
 	StructuredBuffer shapeBuffer;
+	StructuredBuffer tempTileDataBuffer;
+	StructuredBuffer tempTileDataDstBuffer;
 
 	std::array<StructuredBuffer, 3> gridBuffers;
 

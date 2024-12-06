@@ -27,8 +27,12 @@ RWStructuredBuffer<int> g_gridDst : register(u2);
 // Structured Buffer for grid cells to be cleared (read-write UAV)
 RWStructuredBuffer<int> g_gridToBeCleared : register(u3);
 
+// Structured Buffer for temp tile datas (read-write UAV)
+RWStructuredBuffer<int> g_tempTileData : register(u4);
+RWStructuredBuffer<int> g_tempTileDataDst : register(u5);
+
 //groupshared int s_tileData[TileDataSize];
-groupshared int s_tileDataDst[TileDataSize];
+//groupshared int s_tileDataDst[TileDataSize];
 
 unsigned int localGridIndex(uint3 index) {
 	return (index.z * TotalBukkitEdgeLength * TotalBukkitEdgeLength + index.y * TotalBukkitEdgeLength + index.x) * 5;
@@ -314,18 +318,18 @@ void main(uint indexInGroup : SV_GroupIndex, uint3 groupId : SV_GroupID)
     //InterlockedExchange(s_tileData[tileDataIndex + 2], encodeFixedPoint(dz, g_simConstants.fixedPointMultiplier), originalValue);
     //InterlockedExchange(s_tileData[tileDataIndex + 3], encodeFixedPoint(w, g_simConstants.fixedPointMultiplier), originalValue);
     //InterlockedExchange(s_tileData[tileDataIndex + 4], encodeFixedPoint(v, g_simConstants.fixedPointMultiplier), originalValue);
-    InterlockedExchange(g_gridToBeCleared[(groupId.x * TileDataSize) + tileDataIndex], encodeFixedPoint(dx, g_simConstants.fixedPointMultiplier), originalValue);
-    InterlockedExchange(g_gridToBeCleared[(groupId.x * TileDataSize) + tileDataIndex + 1], encodeFixedPoint(dy, g_simConstants.fixedPointMultiplier), originalValue);
-    InterlockedExchange(g_gridToBeCleared[(groupId.x * TileDataSize) + tileDataIndex + 2], encodeFixedPoint(dz, g_simConstants.fixedPointMultiplier), originalValue);
-    InterlockedExchange(g_gridToBeCleared[(groupId.x * TileDataSize) + tileDataIndex + 3], encodeFixedPoint(w, g_simConstants.fixedPointMultiplier), originalValue);
-    InterlockedExchange(g_gridToBeCleared[(groupId.x * TileDataSize) + tileDataIndex + 4], encodeFixedPoint(v, g_simConstants.fixedPointMultiplier), originalValue);
+    InterlockedExchange(g_tempTileData[(groupId.x * TileDataSize) + tileDataIndex], encodeFixedPoint(dx, g_simConstants.fixedPointMultiplier), originalValue);
+    InterlockedExchange(g_tempTileData[(groupId.x * TileDataSize) + tileDataIndex + 1], encodeFixedPoint(dy, g_simConstants.fixedPointMultiplier), originalValue);
+    InterlockedExchange(g_tempTileData[(groupId.x * TileDataSize) + tileDataIndex + 2], encodeFixedPoint(dz, g_simConstants.fixedPointMultiplier), originalValue);
+    InterlockedExchange(g_tempTileData[(groupId.x * TileDataSize) + tileDataIndex + 3], encodeFixedPoint(w, g_simConstants.fixedPointMultiplier), originalValue);
+    InterlockedExchange(g_tempTileData[(groupId.x * TileDataSize) + tileDataIndex + 4], encodeFixedPoint(v, g_simConstants.fixedPointMultiplier), originalValue);
     
     // Make sure all values in destination grid are 0
-    InterlockedExchange(s_tileDataDst[tileDataIndex], 0, originalValue);
+    /*InterlockedExchange(s_tileDataDst[tileDataIndex], 0, originalValue);
     InterlockedExchange(s_tileDataDst[tileDataIndex + 1], 0, originalValue);
     InterlockedExchange(s_tileDataDst[tileDataIndex + 2], 0, originalValue);
     InterlockedExchange(s_tileDataDst[tileDataIndex + 3], 0, originalValue);
-    InterlockedExchange(s_tileDataDst[tileDataIndex + 4], 0, originalValue);
+    InterlockedExchange(s_tileDataDst[tileDataIndex + 4], 0, originalValue);*/
     // Synchronize all threads in the group
     GroupMemoryBarrierWithGroupSync();
     
@@ -366,13 +370,13 @@ void main(uint indexInGroup : SV_GroupIndex, uint3 groupId : SV_GroupID)
 
                         int fixedPoint0;
                         //InterlockedAdd(s_tileData[gridVertexIdx + 0], 0, fixedPoint0);
-                        InterlockedAdd(g_gridToBeCleared[(groupId.x * TileDataSize) + gridVertexIdx + 0], 0, fixedPoint0);
+                        InterlockedAdd(g_tempTileData[(groupId.x * TileDataSize) + gridVertexIdx + 0], 0, fixedPoint0);
                         int fixedPoint1;
                         //InterlockedAdd(s_tileData[gridVertexIdx + 1], 0, fixedPoint1);
-                        InterlockedAdd(g_gridToBeCleared[(groupId.x * TileDataSize) + gridVertexIdx + 1], 0, fixedPoint1);
+                        InterlockedAdd(g_tempTileData[(groupId.x * TileDataSize) + gridVertexIdx + 1], 0, fixedPoint1);
                         int fixedPoint2;
                         //InterlockedAdd(s_tileData[gridVertexIdx + 2], 0, fixedPoint2);
-                        InterlockedAdd(g_gridToBeCleared[(groupId.x * TileDataSize) + gridVertexIdx + 2], 0, fixedPoint2);
+                        InterlockedAdd(g_tempTileData[(groupId.x * TileDataSize) + gridVertexIdx + 2], 0, fixedPoint2);
 
                         float3 weightedDisplacement = weight * float3(
                             decodeFixedPoint(fixedPoint0, g_simConstants.fixedPointMultiplier),
@@ -387,7 +391,7 @@ void main(uint indexInGroup : SV_GroupIndex, uint3 groupId : SV_GroupID)
                         {
                             int fixedPoint4;
                             //InterlockedAdd(s_tileData[gridVertexIdx + 4], 0, fixedPoint4);
-                            InterlockedAdd(g_gridToBeCleared[(groupId.x * TileDataSize) + gridVertexIdx + 4], 0, fixedPoint4);
+                            InterlockedAdd(g_tempTileData[(groupId.x * TileDataSize) + gridVertexIdx + 4], 0, fixedPoint4);
                             volume += weight * decodeFixedPoint(fixedPoint4, g_simConstants.fixedPointMultiplier);
                         }
                     }
@@ -498,7 +502,9 @@ void main(uint indexInGroup : SV_GroupIndex, uint3 groupId : SV_GroupID)
                         int3 neighborCellIndex = int3(weightInfo.cellIndex) + int3(i, j, k);
 
                         // 3D index relative to the corner of the local grid
-                        int3 neighborCellIndexLocal = neighborCellIndex - localGridOrigin;
+                        int3 neighborCellIndexLocal = int3(neighborCellIndex.x - localGridOrigin.x, 
+                                                            neighborCellIndex.y - localGridOrigin.y,
+                                                            neighborCellIndex.z - localGridOrigin.z);
 
                         // Linear Index in the local grid
                         uint gridVertexIdx = localGridIndex(uint3(neighborCellIndexLocal));
@@ -509,14 +515,20 @@ void main(uint indexInGroup : SV_GroupIndex, uint3 groupId : SV_GroupID)
                         float weightedMass = weight * particle.mass;
                         float3 momentum = weightedMass * (particle.displacement + mul(particle.deformationDisplacement, offset));
 
-                        InterlockedAdd(s_tileDataDst[gridVertexIdx + 0], encodeFixedPoint(momentum.x, g_simConstants.fixedPointMultiplier));
+                        /*InterlockedAdd(s_tileDataDst[gridVertexIdx + 0], encodeFixedPoint(momentum.x, g_simConstants.fixedPointMultiplier));
                         InterlockedAdd(s_tileDataDst[gridVertexIdx + 1], encodeFixedPoint(momentum.y, g_simConstants.fixedPointMultiplier));
                         InterlockedAdd(s_tileDataDst[gridVertexIdx + 2], encodeFixedPoint(momentum.z, g_simConstants.fixedPointMultiplier));
                         InterlockedAdd(s_tileDataDst[gridVertexIdx + 3], encodeFixedPoint(weightedMass, g_simConstants.fixedPointMultiplier));
+                        */
+                        InterlockedAdd(g_tempTileDataDst[(groupId.x * TileDataSize) + gridVertexIdx + 0], encodeFixedPoint(momentum.x, g_simConstants.fixedPointMultiplier));
+                        InterlockedAdd(g_tempTileDataDst[(groupId.x * TileDataSize) + gridVertexIdx + 1], encodeFixedPoint(momentum.y, g_simConstants.fixedPointMultiplier));
+                        InterlockedAdd(g_tempTileDataDst[(groupId.x * TileDataSize) + gridVertexIdx + 2], encodeFixedPoint(momentum.z, g_simConstants.fixedPointMultiplier));
+                        InterlockedAdd(g_tempTileDataDst[(groupId.x * TileDataSize) + gridVertexIdx + 3], encodeFixedPoint(weightedMass, g_simConstants.fixedPointMultiplier));
 
                         if (g_simConstants.useGridVolumeForLiquid != 0)
                         {
-                            InterlockedAdd(s_tileDataDst[gridVertexIdx + 4], encodeFixedPoint(weight * particle.volume, g_simConstants.fixedPointMultiplier));
+                            //InterlockedAdd(s_tileDataDst[gridVertexIdx + 4], encodeFixedPoint(weight * particle.volume, g_simConstants.fixedPointMultiplier));
+                            InterlockedAdd(g_tempTileDataDst[(groupId.x * TileDataSize) + gridVertexIdx + 4], encodeFixedPoint(weight * particle.volume, g_simConstants.fixedPointMultiplier));
                         }
                     }
                 }
@@ -535,11 +547,11 @@ void main(uint indexInGroup : SV_GroupIndex, uint3 groupId : SV_GroupID)
         // Atomic loads from shared memory using InterlockedAdd with 0
 
         int dxi, dyi, dzi, wi, vi;
-        InterlockedAdd(s_tileDataDst[tileDataIndex + 0], 0, dxi);
-        InterlockedAdd(s_tileDataDst[tileDataIndex + 1], 0, dyi);
-        InterlockedAdd(s_tileDataDst[tileDataIndex + 2], 0, dzi);
-        InterlockedAdd(s_tileDataDst[tileDataIndex + 3], 0, wi);
-        InterlockedAdd(s_tileDataDst[tileDataIndex + 4], 0, vi);
+        InterlockedAdd(g_tempTileDataDst[tileDataIndex + 0], 0, dxi);
+        InterlockedAdd(g_tempTileDataDst[tileDataIndex + 1], 0, dyi);
+        InterlockedAdd(g_tempTileDataDst[tileDataIndex + 2], 0, dzi);
+        InterlockedAdd(g_tempTileDataDst[tileDataIndex + 3], 0, wi);
+        InterlockedAdd(g_tempTileDataDst[tileDataIndex + 4], 0, vi);
 
     // Atomic adds to the destination buffer
         InterlockedAdd(g_gridDst[gridVertexAddress + 0], dxi);
@@ -549,16 +561,22 @@ void main(uint indexInGroup : SV_GroupIndex, uint3 groupId : SV_GroupID)
         InterlockedAdd(g_gridDst[gridVertexAddress + 4], vi);
     
     // Clear the entries in g_gridToBeCleared
-        //g_gridToBeCleared[gridVertexAddress + 0] = 0;
-        //g_gridToBeCleared[gridVertexAddress + 1] = 0;
-        //g_gridToBeCleared[gridVertexAddress + 2] = 0;
-        //g_gridToBeCleared[gridVertexAddress + 3] = 0;
-        //g_gridToBeCleared[gridVertexAddress + 4] = 0;
-		g_gridToBeCleared[(groupId.x * TileDataSize) + tileDataIndex + 0] = 0;
-		g_gridToBeCleared[(groupId.x * TileDataSize) + tileDataIndex + 1] = 0;
-		g_gridToBeCleared[(groupId.x * TileDataSize) + tileDataIndex + 2] = 0;
-		g_gridToBeCleared[(groupId.x * TileDataSize) + tileDataIndex + 3] = 0;
-		g_gridToBeCleared[(groupId.x * TileDataSize) + tileDataIndex + 4] = 0;
+        g_gridToBeCleared[gridVertexAddress + 0] = 0;
+        g_gridToBeCleared[gridVertexAddress + 1] = 0;
+        g_gridToBeCleared[gridVertexAddress + 2] = 0;
+        g_gridToBeCleared[gridVertexAddress + 3] = 0;
+        g_gridToBeCleared[gridVertexAddress + 4] = 0;
+
+		g_tempTileData[(groupId.x * TileDataSize) + tileDataIndex + 0] = 0;
+		g_tempTileData[(groupId.x * TileDataSize) + tileDataIndex + 1] = 0;
+		g_tempTileData[(groupId.x * TileDataSize) + tileDataIndex + 2] = 0;
+		g_tempTileData[(groupId.x * TileDataSize) + tileDataIndex + 3] = 0;
+		g_tempTileData[(groupId.x * TileDataSize) + tileDataIndex + 4] = 0;
+        g_tempTileDataDst[(groupId.x * TileDataSize) + tileDataIndex + 0] = 0;
+		g_tempTileDataDst[(groupId.x * TileDataSize) + tileDataIndex + 1] = 0;
+		g_tempTileDataDst[(groupId.x * TileDataSize) + tileDataIndex + 2] = 0;
+		g_tempTileDataDst[(groupId.x * TileDataSize) + tileDataIndex + 3] = 0;
+		g_tempTileDataDst[(groupId.x * TileDataSize) + tileDataIndex + 4] = 0;
     }
 
 }

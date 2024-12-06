@@ -5,5 +5,6 @@
 "DescriptorTable(SRV(t0, numDescriptors=2))," /* Table for BukkitParticleData & ThreadData */ \
 "DescriptorTable(SRV(t2, numDescriptors=1))," /* Table for curr grid */ \
 "DescriptorTable(UAV(u2, numDescriptors=1))," /* Table for next grid */ \
-"DescriptorTable(UAV(u3, numDescriptors=1))" /* Table for nextnext grid */ 
+"DescriptorTable(UAV(u3, numDescriptors=1))," /* Table for nextnext grid */ \
+"DescriptorTable(UAV(u4, numDescriptors=2))" /* Table for temp tile datas */ 
 

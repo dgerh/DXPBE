@@ -417,7 +417,7 @@ void PBMPMScene::constructScene() {
 	auto computeId = g2p2gPipeline.getCommandListID();
 
 	// Create Constant Data
-	constants = { {128, 128, 128}, 0.1, 2.5, 1.5, 0.01,
+	constants = { {64, 128, 64}, 0.001, 2.5, 1.5, 0.01,
 		(unsigned int)std::ceil(std::pow(10, 7)),
 		1, 4, 30, 1, 0, 0, 0, 0, 0, 0, 10, 0.9 };
 
@@ -460,9 +460,17 @@ void PBMPMScene::constructScene() {
 
 	// Shape Buffer
 	std::vector<SimShape> shapes;
-	shapes.push_back(SimShape(0, { 50, 50, 50}, 0, { 5, 5, 5 },
+	shapes.push_back(SimShape(0, { 50, 50, 50}, 0, { 10, 10, 10 },
 		0, 3, 0, 1, 100));
 	shapeBuffer = StructuredBuffer(shapes.data(), shapes.size(), sizeof(SimShape));
+
+	// tempTileData Buffer
+	std::vector<int> tileData;
+	tileData.resize(std::ceil(constants.gridSize.x / BukkitSize) *
+		std::ceil(constants.gridSize.y / BukkitSize) * std::ceil(constants.gridSize.z / BukkitSize) *
+		TileDataSize);
+	tempTileDataBuffer = StructuredBuffer(tileData.data(), tileData.size(), sizeof(int));
+	tempTileDataDstBuffer = StructuredBuffer(tileData.data(), tileData.size(), sizeof(int));
 
 	// Pass Structured Buffers to Compute Pipeline
 	particleBuffer.passDataToGPU(*context, g2p2gPipeline.getCommandList(), computeId);
@@ -471,6 +479,8 @@ void PBMPMScene::constructScene() {
 	particleSimDispatch.passDataToGPU(*context, g2p2gPipeline.getCommandList(), computeId);
 	renderDispatchBuffer.passDataToGPU(*context, g2p2gPipeline.getCommandList(), computeId);
 	shapeBuffer.passCBVDataToGPU(*context, g2p2gPipeline.getDescriptorHeap());
+	tempTileDataBuffer.passDataToGPU(*context, g2p2gPipeline.getCommandList(), computeId);
+	tempTileDataDstBuffer.passDataToGPU(*context, g2p2gPipeline.getCommandList(), computeId);
 
 	// Create UAV's for each buffer
 	particleBuffer.createUAV(*context, g2p2gPipeline.getDescriptorHeap());
@@ -478,6 +488,8 @@ void PBMPMScene::constructScene() {
 	particleCount.createUAV(*context, g2p2gPipeline.getDescriptorHeap());
 	particleSimDispatch.createUAV(*context, g2p2gPipeline.getDescriptorHeap());
 	renderDispatchBuffer.createUAV(*context, g2p2gPipeline.getDescriptorHeap());
+	tempTileDataBuffer.createUAV(*context, g2p2gPipeline.getDescriptorHeap());
+	tempTileDataDstBuffer.createUAV(*context, g2p2gPipeline.getDescriptorHeap());
 	
 	// Create SRV's for particleBuffer & particleCount
 	particleBuffer.createSRV(*context, g2p2gPipeline.getDescriptorHeap());
@@ -617,6 +629,7 @@ void PBMPMScene::compute() {
 			cmdList->SetComputeRootDescriptorTable(3, currentGrid->getSRVGPUDescriptorHandle());
 			cmdList->SetComputeRootDescriptorTable(4, nextGrid->getUAVGPUDescriptorHandle());
 			cmdList->SetComputeRootDescriptorTable(5, nextNextGrid->getUAVGPUDescriptorHandle());
+			cmdList->SetComputeRootDescriptorTable(6, tempTileDataBuffer.getUAVGPUDescriptorHandle());
 
 			// Transition dispatch buffer to an indirect argument
 			auto dispatchBarrier = CD3DX12_RESOURCE_BARRIER::Transition(bukkitSystem.dispatch.getBuffer(),
@@ -747,6 +760,9 @@ void PBMPMScene::releaseResources() {
 	particleSimDispatch.releaseResources();
 	renderDispatchBuffer.releaseResources();
 	shapeBuffer.releaseResources();
+	tempTileDataBuffer.releaseResources();
+	tempTileDataDstBuffer.releaseResources();
+
 	for (int i = 0; i < 3; i++) {
 		gridBuffers[i].releaseResources();
 	}
