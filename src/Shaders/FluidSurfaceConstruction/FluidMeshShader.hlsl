@@ -239,7 +239,7 @@ void main(
         }
         
         // Write the triangle to the output buffer
-        triangles[triOffset + t] = uint3(triIndices[0], triIndices[2], triIndices[1]);
+        triangles[triOffset + t] = uint3(triIndices[0], triIndices[1], triIndices[2]);
     }
 }
  
