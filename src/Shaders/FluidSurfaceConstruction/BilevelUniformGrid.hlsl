@@ -2,16 +2,12 @@
 #include "utils.hlsl"
 #include "../constants.h"
 
-struct Block {
-    int nonEmptyCellCount;
-};
-
 // SRV for positions buffer (input buffer)
 StructuredBuffer<float3> positionsBuffer : register(t0);
 
 // UAV for the bilevel uniform grid (output buffers)
 RWStructuredBuffer<Cell> cells : register(u0);
-RWStructuredBuffer<Block> blocks : register(u1);
+RWStructuredBuffer<int> blocks : register(u1);
 
 ConstantBuffer<BilevelUniformGridConstants> cb : register(b0);
 
@@ -51,25 +47,21 @@ void main(uint3 globalThreadId : SV_DispatchThreadID) {
 
     // Do this only once per cell, when the first particle is added to the cell
     if (particleIndexInCell == 0) {
-        // Increment the nonEmptyCellCount of the block, and any blocks for which this cell borders on (which can be a maximum of 8)
+        // Increment the number of non-empty cells in the block, and any blocks for which this cell borders on (which can be a maximum of 8)
         // `edge` is carefully calculated so that these nested loops will exactly iterate over each abutting neighbor block.
         int3 gridBlockDimensions = cb.dimensions / CELLS_PER_BLOCK_EDGE;
-        for (int i = 0; i <= abs(edge.x); ++i) {
-            for (int j = 0; j <= abs(edge.y); ++j) {
-                for (int k = 0; k <= abs(edge.z); ++k) {
-                    int3 neighborBlockIndices = blockIndices + (int3(i, j, k) * edge);
+        int3 globalNeighborBlockIndex3d = clamp(blockIndices + edge, int3(0, 0, 0), gridBlockDimensions - 1);
+        int3 minSearchBounds = min(blockIndices, globalNeighborBlockIndex3d);
+        int3 maxSearchBounds = max(blockIndices, globalNeighborBlockIndex3d);
 
-                    // TODO: can avoid checking this every loop by using min/max clamps
-                    // and looping over global indices (see SurfaceCellDetection.hlsl)
-                    if (any(neighborBlockIndices >= gridBlockDimensions) || 
-                        any(neighborBlockIndices < 0)) {
-                        continue;
-                    }
-
+        for (int z = minSearchBounds.z; z <= maxSearchBounds.z; ++z) {
+            for (int y = minSearchBounds.y; y <= maxSearchBounds.y; ++y) {
+                for (int x = minSearchBounds.x; x <= maxSearchBounds.x; ++x) {
+                    int3 neighborBlockIndices = int3(x, y, z);
                     int neighborBlockIndex1D = to1D(neighborBlockIndices, gridBlockDimensions);
 
                     // TODO: test if its faster to atomic add first to a shared memory variable, then add to the buffer at the end
-                    InterlockedAdd(blocks[neighborBlockIndex1D].nonEmptyCellCount, 1);
+                    InterlockedAdd(blocks[neighborBlockIndex1D], 1);
                 }
             }
         }

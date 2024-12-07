@@ -16,16 +16,14 @@ ConstantBuffer<BilevelUniformGridConstants> cb : register(b0);
 // UAV for the surface vertex normals
 RWStructuredBuffer<float3> surfaceVertexNormals : register(u0);
 
-
-// TODO: 3D dispatch for better indexing
 [numthreads(SURFACE_VERTEX_NORMAL_THREADS_X, 1, 1)]
 void main(uint3 globalThreadId : SV_DispatchThreadID) {
     if (globalThreadId.x >= surfaceVertDensityDispatch[0].x) {
         return;
     }
 
-    int globalSurfaceVertIndex1d = surfaceVertexIndices[globalThreadId.x];
-    int3 globalSurfaceVertIndex3d = to3D(globalSurfaceVertIndex1d, cb.dimensions + int3(1, 1, 1));
+    int globalSurfaceVertIndex1d = surfaceVertexIndices[globalThreadId.x]; // I wonder if you could encode the 3D index into one entry in the buffer, to avoid the modular arithmetic in to3D
+    int3 globalSurfaceVertIndex3d = to3D(globalSurfaceVertIndex1d, cb.dimensions + int3(1, 1, 1)); 
 
     float3 normal;
     normal.x = surfaceVertexDensities[to1D(globalSurfaceVertIndex3d + int3(1, 0, 0), cb.dimensions + int3(1, 1, 1))]

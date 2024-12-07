@@ -87,5 +87,5 @@ float4 main(PSInput input) : SV_Target
     }
 
     float3 baseColor = refraction * (1.0 - fr) + reflection * fr;
-    return float4(gammaCorrect(baseColor), 0.5);
+    return float4(gammaCorrect(baseColor), 1.0);
 }

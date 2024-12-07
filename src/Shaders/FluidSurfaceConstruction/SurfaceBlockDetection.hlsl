@@ -1,10 +1,6 @@
 #include "SurfaceBlockDetectionRootSig.hlsl"
 #include "../constants.h"
 
-struct Block {
-    int nonEmptyCellCount;
-};
-
 struct NumberOfBlocks {
     int value;
 };
@@ -12,7 +8,7 @@ struct NumberOfBlocks {
 ConstantBuffer<NumberOfBlocks> numberOfBlocks : register(b0);
 
 // SRV for blocks buffer (input buffer)
-StructuredBuffer<Block> blocks : register(t0);
+StructuredBuffer<int> blocks : register(t0);
 
 // UAV for the surface block indices buffer (output buffer)
 RWStructuredBuffer<int> surfaceBlockIndices : register(u0);
@@ -32,8 +28,8 @@ void main(int3 globalThreadId : SV_DispatchThreadID) {
         return;
     }
 
-    Block block = blocks[globalThreadId.x];
-    bool isSurfaceBlock = block.nonEmptyCellCount > 0 && block.nonEmptyCellCount < FILLED_BLOCK;
+    int blockNonEmptyCellCount = blocks[globalThreadId.x];
+    bool isSurfaceBlock = blockNonEmptyCellCount > 0 && blockNonEmptyCellCount < FILLED_BLOCK;
     int localSurfaceBlockIndexInWave = WavePrefixCountBits(isSurfaceBlock);
     int surfaceBlockWaveCount = WaveActiveCountBits(isSurfaceBlock);
     int surfaceBlockGlobalStartIdx;

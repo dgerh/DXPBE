@@ -77,17 +77,7 @@ float3 getVertexNormals(int3 vertexIndices[2])[2] {
 
 // In marching cubes, we place new vertices along edges according to the density values at the endpoints, using linear interpolation.
 float interpolateDensity(float d0, float d1) {
-    // TODO: this seems a little overcomplicated. Can it be simplified?
-    if (abs(d0 - ISOVALUE) < EPSILON && abs(d1 - ISOVALUE) < EPSILON) {
-        return 0.5;
-    }
-
-    if (abs(d0 - d1) > EPSILON) {
-        float t = clamp((ISOVALUE - d0) / (d1 - d0), 0.0, 1.0);
-        return t;
-    }
-
-    return d0 < ISOVALUE ? 1.0 : 0.0;
+    return clamp((ISOVALUE - d0) / (d1 - d0), 0.0, 1.0);
 }
 
 // In marching cubes, we draw triangles in a cube depending on which of the 8 vertices are above the isovalue. With 8 vertices in a cube,
@@ -130,32 +120,36 @@ int cellEdgeToBlockEdge(int localCellIdx1d, int localEdgeIdx, int halfBlockIndex
 [outputtopology("triangle")]
 // Each workgroup represents half a block of cells. (To appease mesh shading limits on output number of prims/verts)
 // Each thread will represent a single cell (not necessarily a surface cell), but process multiple edges.
-[numthreads(CELLS_PER_HALFBLOCK, 1, 1)]
+[numthreads(HALFBLOCK_CELLS_X, HALFBLOCK_CELLS_Y, HALFBLOCK_CELLS_Z)]
 void main(
-    uint3 globalThreadId : SV_DispatchThreadID,
     uint3 localThreadId : SV_GroupThreadID, 
     uint3 workgroupId : SV_GroupID,
     out vertices VertexOutput verts[MAX_VERTICES],
     out indices uint3 triangles[MAX_PRIMITIVES])
 {
-    if (globalThreadId.x >= surfaceHalfBlockDispatch[0].x * CELLS_PER_HALFBLOCK) return;
+    // As with the surface cell detection shader, the global thread ID isn't quite what we want here. Do it ourselves.
+    uint globalThreadId = to1D(localThreadId, int3(HALFBLOCK_CELLS_X, HALFBLOCK_CELLS_Y, HALFBLOCK_CELLS_Z))
+                            + (workgroupId.x * HALFBLOCK_CELLS_X * HALFBLOCK_CELLS_Y * HALFBLOCK_CELLS_Z);
+    int localThreadIdx1d = to1D(localThreadId, int3(HALFBLOCK_CELLS_X, HALFBLOCK_CELLS_Y, HALFBLOCK_CELLS_Z));
+
+    if (globalThreadId >= surfaceHalfBlockDispatch[0].x * CELLS_PER_HALFBLOCK) return;
 
     // Piggy back to reset the surfaceVertDensityDispatch buffer
-    if (globalThreadId.x == 0) {
+    if (globalThreadId == 0) {
         surfaceVertDensityDispatch[0].x = 0;
     }
 
-    int blockIdx1d = surfaceBlockIndices[globalThreadId.x / CELLS_PER_BLOCK];
+    int blockIdx1d = surfaceBlockIndices[globalThreadId / CELLS_PER_BLOCK];
     int3 blockIdx3d = to3D(blockIdx1d, (cb.dimensions / CELLS_PER_BLOCK_EDGE));
     
-    int localCellIdx1d = globalThreadId.x % CELLS_PER_BLOCK;
+    int localCellIdx1d = globalThreadId % CELLS_PER_BLOCK;
     int halfBlockIndex = (localCellIdx1d < (CELLS_PER_BLOCK / 2)) ? 0 : 1;
 
     // Each thread processes 170 / workgroup_size edges (170 is the number of edges in a 4x4x2 half block)
     int vertexCount = 0;
 
     for (int i = 0; i < divRoundUp(EDGES_PER_HALFBLOCK, CELLS_PER_HALFBLOCK); ++i) {
-        int edgeIdx = i * CELLS_PER_HALFBLOCK + localThreadId.x;
+        int edgeIdx = i * CELLS_PER_HALFBLOCK + localThreadIdx1d;
         bool needVertex = false;
         float density0;
         float density1;
@@ -184,7 +178,7 @@ void main(
         float t = interpolateDensity(density0, density1);
         float3 vertPosWorld = cb.minBounds + cb.resolution * lerp(float3(vertexIndices[0]), float3(vertexIndices[1]), t);
         float4 vertPosClip = mul(cb.viewProj, float4(vertPosWorld, 1.0));
-        float3 vertNormal = -normalize(lerp(vertexNormals[0], vertexNormals[1], t)); // Paper negates normals, not sure why!
+        float3 vertNormal = normalize(lerp(vertexNormals[0], vertexNormals[1], t));
 
         // Store the index of the output vertex in shared memory
         // In next step, each thread acts as a cell and will read several vertex indices, so we need them all in shared memory.
@@ -204,19 +198,25 @@ void main(
     int3 localCellIdx3d = to3D(localCellIdx1d, CELLS_PER_BLOCK_EDGE * int3(1, 1, 1)); // TODO: can we avoid this conversion with 3D dispatch?
     int3 globalCellIdx3d = blockIdx3d * CELLS_PER_BLOCK_EDGE + localCellIdx3d;
 
-    int mcCase = computeMarchingCubesCase(globalCellIdx3d);
-    int numTris = triangleCounts[mcCase];
+    // Every surface block has surface vertices, but since each workgroup represents a *half*-blocks,
+    // it's possible for a workgroup's half block to have no surface vertices. 
+    // Note: paper does this early-return before MC case computation. That seems to be undefined behavior, so instead just 
+    // set the mcCase directly if there are no vertices, to save on the expensive global mem accesses.
+    int mcCase;
+    int numTris;
+    if (vertexCount == 0) {
+        mcCase = 0;
+        numTris = 0;
+    } else {
+        mcCase = computeMarchingCubesCase(globalCellIdx3d);
+        numTris = triangleCounts[mcCase];
+    }
+    
     int triOffset = WavePrefixSum(numTris);
     int totalTris = WaveActiveSum(numTris);
 
     // We finally have all the info we need to tell the mesh shader how many vertices and primitives we're outputting.
     SetMeshOutputCounts(vertexCount, totalTris);
-
-    // Every surface block has surface vertices, but since each workgroup represents a *half*-blocks,
-    // it's possible for a workgroup's half block to have no surface vertices. 
-    // Note: paper does this early-return before MC case computation (which is great because it's cheaper). Unfortunately I believe it's undefined behavior,
-    // because all threads have to set mesh output counts.
-    if (vertexCount == 0) return;
 
     // Now we do the actual marching cubes / outputting of vertices and tris
     int triTable[12] = triangleTable[mcCase];
@@ -224,7 +224,7 @@ void main(
         int triIndices[3];
 
         [unroll]
-        for (int v = 0; v < 3; ++v) {
+        for (int v = 0; v < 3; ++v) { 
             int cellEdgeIdx = triTable[t * 3 + v]; // edge index within a cell [0-11]
             int blockEdgeIdx = cellEdgeToBlockEdge(localCellIdx1d, cellEdgeIdx, halfBlockIndex); // edge within a block (0-169)
             int outputVertexIndex = outputVertexIndices[blockEdgeIdx];

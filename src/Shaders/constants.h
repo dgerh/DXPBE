@@ -10,12 +10,15 @@ static const int MAX_PARTICLES_PER_CELL = 8;
 static const int CELLS_PER_BLOCK_EDGE = 4; // each block has 4x4x4 cells
 static const int CELLS_PER_BLOCK = CELLS_PER_BLOCK_EDGE * CELLS_PER_BLOCK_EDGE * CELLS_PER_BLOCK_EDGE;
 static const int CELLS_PER_HALFBLOCK = CELLS_PER_BLOCK / 2;
+static const int HALFBLOCK_CELLS_X = CELLS_PER_BLOCK_EDGE;
+static const int HALFBLOCK_CELLS_Y = CELLS_PER_BLOCK_EDGE;
+static const int HALFBLOCK_CELLS_Z = CELLS_PER_BLOCK_EDGE / 2;
 static const int FILLED_BLOCK = (CELLS_PER_BLOCK_EDGE + 2) * (CELLS_PER_BLOCK_EDGE + 2) * (CELLS_PER_BLOCK_EDGE + 2);
 static const int BILEVEL_UNIFORM_GRID_THREADS_X = 64;
 static const int SURFACE_BLOCK_DETECTION_THREADS_X = 64;
 // For this compute pass, its important for the workgroup size to match the number of cells per block,
 // because we use shared memory in this pass and its most coherent if workgroups map to blocks.
-static const int SURFACE_CELL_DETECTION_THREADS_X = CELLS_PER_BLOCK;
+static const int SURFACE_CELL_DETECTION_THREADS = CELLS_PER_BLOCK_EDGE;
 static const int SURFACE_VERTEX_COMPACTION_THREADS_X = 64;
 // It's actually not so important for the workgroup size for this pass to match the number of vertices per block. By this point
 // we no longer have block-level coherency of vertices anyway. But use this as a starting point - can adjust it later.
