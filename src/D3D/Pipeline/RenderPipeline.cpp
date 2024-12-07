@@ -67,9 +67,9 @@ void RenderPipeline::createPSOD() {
     gfxPsod.BlendState.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
     gfxPsod.BlendState.RenderTarget[0].LogicOp = D3D12_LOGIC_OP_NOOP;
     gfxPsod.BlendState.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
-    gfxPsod.DepthStencilState.DepthEnable = FALSE;
+    gfxPsod.DepthStencilState.DepthEnable = TRUE;
     gfxPsod.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_ALWAYS;
-    gfxPsod.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+    gfxPsod.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
     gfxPsod.DepthStencilState.StencilEnable = FALSE;
     gfxPsod.DepthStencilState.StencilReadMask = 0;
     gfxPsod.DepthStencilState.StencilWriteMask = 0;
