@@ -26,6 +26,7 @@ public:
 	XMMATRIX getViewMat();
 	XMMATRIX getProjMat();
 	XMMATRIX getViewProjMat();
+	XMFLOAT3 getPosition() { return position; }
 
 private:
 	float FOVY;

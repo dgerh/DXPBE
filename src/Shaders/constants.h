@@ -16,8 +16,7 @@ static const int SURFACE_BLOCK_DETECTION_THREADS_X = 64;
 // For this compute pass, its important for the workgroup size to match the number of cells per block,
 // because we use shared memory in this pass and its most coherent if workgroups map to blocks.
 static const int SURFACE_CELL_DETECTION_THREADS_X = CELLS_PER_BLOCK;
-// For this compute pass as well, it's important that the workgroup size matches the number of vertices per block.
-static const int SURFACE_VERTEX_COMPACTION_THREADS_X = (CELLS_PER_BLOCK_EDGE + 1) * (CELLS_PER_BLOCK_EDGE + 1) * (CELLS_PER_BLOCK_EDGE + 1);
+static const int SURFACE_VERTEX_COMPACTION_THREADS_X = 64;
 // It's actually not so important for the workgroup size for this pass to match the number of vertices per block. By this point
 // we no longer have block-level coherency of vertices anyway. But use this as a starting point - can adjust it later.
 static const int SURFACE_VERTEX_DENSITY_THREADS_X = SURFACE_VERTEX_COMPACTION_THREADS_X;
@@ -49,5 +48,7 @@ struct MeshShadingConstants {
     int3 dimensions;
     float resolution;
     float3 minBounds;
+    float padding;
+    float3 cameraPos;
 };
 #endif

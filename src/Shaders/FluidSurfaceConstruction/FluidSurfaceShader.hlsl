@@ -2,9 +2,10 @@
 #include "../constants.h"
 
 struct PSInput {
-    float4 ndcPos: SV_POSITION;
-    float3 normal: NORMAL;
-    float3 worldPos: TEXCOORD0;
+    float4 ndcPos: SV_Position;
+    float3 normal: NORMAL0;
+    float3 worldPos: POSITION1;
+    int meshletIndex: COLOR0;
 };
 
 ConstantBuffer<MeshShadingConstants> cb : register(b0);
@@ -47,18 +48,22 @@ float3 gammaCorrect(float3 color)
     return pow(color, float3(correctionFactor, correctionFactor, correctionFactor));
 }
 
+float3 getMeshletColor(int index)
+{
+    float r = frac(sin(float(index) * 12.9898) * 43758.5453);
+    float g = frac(sin(float(index) * 78.233) * 43758.5453);
+    float b = frac(sin(float(index) * 43.853) * 43758.5453);
+    return float3(r, g, b);
+}
+
 static const float3 baseColor = float3(0.7, 0.9, 1);
 
 [RootSignature(ROOTSIG)]
 float4 main(PSInput input) : SV_Target
 {
-     // refract
+    // refract
     float3 pos = input.worldPos;
     float3 dir = normalize(pos - cb.cameraPos);
-    
-    float4 ndcPos = input.ndcPos;
-    float2 uv = (ndcPos.xy) * 0.5 + 0.5;
-    uv.y = 1.0 - uv.y;
 
     float ior = 1.33;
     float eta = 1.0 / ior;
@@ -82,5 +87,5 @@ float4 main(PSInput input) : SV_Target
     }
 
     float3 baseColor = refraction * (1.0 - fr) + reflection * fr;
-    return float4(gammaCorrect(baseColor), 1.0);
+    return float4(gammaCorrect(baseColor), 0.5);
 }

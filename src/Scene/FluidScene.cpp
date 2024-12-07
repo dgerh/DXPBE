@@ -24,8 +24,7 @@ FluidScene::FluidScene(DXContext* context,
 // In this pipeline, drawing is done via a mesh shader
 void FluidScene::draw(Camera* camera) {
     auto cmdList = fluidMeshPipeline->getCommandList();
-    MeshShadingConstants meshShadingConstants = { camera->getViewProjMat(), gridConstants.gridDim, gridConstants.resolution, gridConstants.minBounds };
-
+    MeshShadingConstants meshShadingConstants = { camera->getViewProjMat(), gridConstants.gridDim, gridConstants.resolution, gridConstants.minBounds, 0.0, camera->getPosition() };
     cmdList->SetPipelineState(fluidMeshPipeline->getPSO());
     cmdList->SetGraphicsRootSignature(fluidMeshPipeline->getRootSignature());
 
@@ -63,7 +62,7 @@ void FluidScene::draw(Camera* camera) {
     cmdList->SetGraphicsRootDescriptorTable(2, surfaceVertexNormalBuffer.getSRVGPUDescriptorHandle());
     cmdList->SetGraphicsRootShaderResourceView(3, surfaceHalfBlockDispatch.getGPUVirtualAddress());
     cmdList->SetGraphicsRootUnorderedAccessView(4, surfaceVertDensityDispatch.getGPUVirtualAddress());
-    cmdList->SetGraphicsRoot32BitConstants(5, 23, &meshShadingConstants, 0);
+    cmdList->SetGraphicsRoot32BitConstants(5, 27, &meshShadingConstants, 0);
 
     // Transition surfaceHalfBlockDispatch to indirect argument buffer
     D3D12_RESOURCE_BARRIER surfaceHalfBlockDispatchBarrier2 = CD3DX12_RESOURCE_BARRIER::Transition(
@@ -151,7 +150,7 @@ void FluidScene::constructScene() {
     XMUINT3 dipatchCPU = { 0, 1, 1 };
     std::vector<int> surfaceVertices(numVerts, 0);
     std::vector<int> surfaceVertexIndices(numVerts, 0);
-    std::vector<float> surfaceVertexDensities(numVerts, 1.f); // initialize density to 1 (and reset it to 1). Just has to be above ISOVALUE
+    std::vector<float> surfaceVertexDensities(numVerts, 0.f);
     std::vector<XMFLOAT3> surfaceVertexNormals(numVerts, { 0.f, 0.f, 0.f });
 
     // Use the descriptor heap for the bilevelUniformGridCP for pretty much everything. Simplifies sharing resources
@@ -401,14 +400,6 @@ void FluidScene::compactSurfaceVertices() {
     ID3D12DescriptorHeap* computeDescriptorHeaps[] = { bilevelUniformGridCP->getDescriptorHeap()->Get() };
     cmdList->SetDescriptorHeaps(_countof(computeDescriptorHeaps), computeDescriptorHeaps);
 
-
-    // Transition surfaceBlockDispatch to an SRV 
-    D3D12_RESOURCE_BARRIER surfaceBlockDispatchBarrier = CD3DX12_RESOURCE_BARRIER::Transition(
-        surfaceBlockDispatch.getBuffer(),
-        D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT,
-        D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE
-    );
-
     // Transition surfaceVerticesBuffer back to SRV 
     D3D12_RESOURCE_BARRIER surfaceVerticesBufferBarrier = CD3DX12_RESOURCE_BARRIER::Transition(
         surfaceVerticesBuffer.getBuffer(),
@@ -416,28 +407,18 @@ void FluidScene::compactSurfaceVertices() {
         D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE 
     );
 
-    D3D12_RESOURCE_BARRIER barriers[2] = { surfaceBlockDispatchBarrier, surfaceVerticesBufferBarrier };
-    cmdList->ResourceBarrier(2, barriers);
+    cmdList->ResourceBarrier(1, &surfaceVerticesBufferBarrier);
 
     // Set compute root descriptor table
     cmdList->SetComputeRootDescriptorTable(0, surfaceVerticesBuffer.getSRVGPUDescriptorHandle());
-    //make sure this should be block and SRV
-    cmdList->SetComputeRootDescriptorTable(1, surfaceBlockDispatch.getSRVGPUDescriptorHandle());
-    cmdList->SetComputeRootDescriptorTable(2, surfaceVertexIndicesBuffer.getUAVGPUDescriptorHandle());
-
-    cmdList->SetComputeRootUnorderedAccessView(3, surfaceVertDensityDispatch.getGPUVirtualAddress());
-
-    // Transition surfaceBlockDispatch to indirect argument buffer
-    D3D12_RESOURCE_BARRIER surfaceBlockDispatchBarrier2 = CD3DX12_RESOURCE_BARRIER::Transition(
-        surfaceBlockDispatch.getBuffer(),
-        D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
-        D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT
-    );
-
-    cmdList->ResourceBarrier(1, &surfaceBlockDispatchBarrier2);
+    cmdList->SetComputeRootDescriptorTable(1, surfaceVertexIndicesBuffer.getUAVGPUDescriptorHandle());
+    cmdList->SetComputeRootUnorderedAccessView(2, surfaceVertDensityDispatch.getGPUVirtualAddress());
+    cmdList->SetComputeRoot32BitConstants(3, 3, &gridConstants.gridDim, 0);
 
     // Dispatch
-    cmdList->ExecuteIndirect(commandSignature, 1, surfaceBlockDispatch.getBuffer(), 0, nullptr, 0);
+    int numVertices = (gridConstants.gridDim.x + 1) * (gridConstants.gridDim.y + 1) * (gridConstants.gridDim.z + 1);
+    int numWorkGroups = (numVertices + SURFACE_VERTEX_COMPACTION_THREADS_X - 1) / SURFACE_VERTEX_COMPACTION_THREADS_X;
+    cmdList->Dispatch(numWorkGroups, 1, 1);
 
     context->executeCommandList(surfaceVertexCompactionCP->getCommandListID());
     context->signalAndWaitForFence(fence, fenceValue);

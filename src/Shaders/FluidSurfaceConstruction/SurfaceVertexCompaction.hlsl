@@ -1,26 +1,30 @@
 #include "SurfaceVertexCompactionRootSig.hlsl"
 #include "../constants.h"
 
+struct Uniforms {
+    int3 gridDim;
+};
+
 // Inputs
 // SRV for surface vertices buffer
 StructuredBuffer<int> surfaceVertices : register(t0);
-// SRV for the dispatch arguments buffer
-StructuredBuffer<int3> surfaceBlocksDispatch : register(t1);
 
 // Outputs (UAVs)
 RWStructuredBuffer<int> surfaceVertexIndices : register(u0);
 RWStructuredBuffer<int3> surfaceVertDensityDispatch : register(u1);
 
+// Constant buffer (root constant)
+ConstantBuffer<Uniforms> cb : register(b0);
+
 /*
     Similar to SurfaceBlockDetection, this is effectively a stream compaction step. Again, instead of following the paper directly,
     which uses many atomic operations, we'll use wave intrinsics to reduce the number of atomics to one-per-wave.
 
-    This compute pass launches a thread per potential surface vertex. Each workgroup is sized to match a single surface block, so the total threads are (CELLS_PER_BLOCK_EDGE + 1)^3 * surfaceBlocksDispatch[0].x.
-    Note that the threads in a single workgroup don't necessarily all map to the same surface block.
+    This compute pass launches a thread per vertex.
 */
 [numthreads(SURFACE_VERTEX_COMPACTION_THREADS_X, 1, 1)]
 void main(uint3 globalThreadId : SV_DispatchThreadID) {
-    if (globalThreadId.x >= surfaceBlocksDispatch[0].x * (CELLS_PER_BLOCK_EDGE + 1) * (CELLS_PER_BLOCK_EDGE + 1) * (CELLS_PER_BLOCK_EDGE + 1)) {
+    if (globalThreadId.x >= (cb.gridDim.x + 1) * (cb.gridDim.y + 1) * (cb.gridDim.z + 1)) {
         return;
     }
 

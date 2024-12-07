@@ -27,13 +27,15 @@ groupshared int outputVertexIndices[MAX_VERTICES];
 groupshared float3 vertexWorldPositions[MAX_VERTICES];
 groupshared float3 vertexNormalsShared[MAX_VERTICES];
 groupshared float4 vertexClipPositions[MAX_VERTICES];
+groupshared float vertexMeshletIndices[MAX_VERTICES];
 
 // Define the payload structure
 struct VertexOutput
 {
     float4 clipPos : SV_POSITION;
-    float3 normal : NORMAL;
-    float3 worldPos : TEXCOORD0;
+    float3 normal : NORMAL0;
+    float3 worldPos : POSITION1;
+    int meshletIndex : COLOR0;
 };
 
 // Get the global grid vertex index of both endpoints from the edge index in the block
@@ -132,10 +134,11 @@ int cellEdgeToBlockEdge(int localCellIdx1d, int localEdgeIdx, int halfBlockIndex
 void main(
     uint3 globalThreadId : SV_DispatchThreadID,
     uint3 localThreadId : SV_GroupThreadID, 
+    uint3 workgroupId : SV_GroupID,
     out vertices VertexOutput verts[MAX_VERTICES],
     out indices uint3 triangles[MAX_PRIMITIVES])
 {
-    if (globalThreadId.x > surfaceHalfBlockDispatch[0].x * CELLS_PER_HALFBLOCK) return;
+    if (globalThreadId.x >= surfaceHalfBlockDispatch[0].x * CELLS_PER_HALFBLOCK) return;
 
     // Piggy back to reset the surfaceVertDensityDispatch buffer
     if (globalThreadId.x == 0) {
@@ -192,6 +195,7 @@ void main(
         vertexWorldPositions[outputVertexIndex] = vertPosWorld;
         vertexClipPositions[outputVertexIndex] = vertPosClip;
         vertexNormalsShared[outputVertexIndex] = vertNormal;
+        vertexMeshletIndices[outputVertexIndex] = workgroupId.x;
     }
 
     GroupMemoryBarrierWithGroupSync();
@@ -217,7 +221,7 @@ void main(
     // Now we do the actual marching cubes / outputting of vertices and tris
     int triTable[12] = triangleTable[mcCase];
     for (int t = 0; t < numTris; ++t) {
-        int triVerts[3];
+        int triIndices[3];
 
         [unroll]
         for (int v = 0; v < 3; ++v) {
@@ -225,16 +229,17 @@ void main(
             int blockEdgeIdx = cellEdgeToBlockEdge(localCellIdx1d, cellEdgeIdx, halfBlockIndex); // edge within a block (0-169)
             int outputVertexIndex = outputVertexIndices[blockEdgeIdx];
 
-            triVerts[v] = outputVertexIndex;
+            triIndices[v] = outputVertexIndex;
 
             // Write the vertex attributes to the output buffer
             verts[outputVertexIndex].clipPos = vertexClipPositions[outputVertexIndex];
             verts[outputVertexIndex].normal = vertexNormalsShared[outputVertexIndex];
             verts[outputVertexIndex].worldPos = vertexWorldPositions[outputVertexIndex];
+            verts[outputVertexIndex].meshletIndex = blockIdx1d;
         }
         
         // Write the triangle to the output buffer
-        triangles[triOffset + t] = uint3(triVerts[0], triVerts[1], triVerts[2]);
+        triangles[triOffset + t] = uint3(triIndices[0], triIndices[2], triIndices[1]);
     }
 }
  

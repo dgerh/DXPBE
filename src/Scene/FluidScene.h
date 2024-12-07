@@ -13,11 +13,14 @@ struct GridConstants {
     float resolution;
 };
 
+// TODO: can just combine this with grid constants
 struct MeshShadingConstants {
     XMMATRIX viewProj;
     XMINT3 dimensions;
     float resolution;
     XMFLOAT3 minBounds;
+    float padding;
+    XMFLOAT3 cameraPos;
 };
 
 struct Cell {
