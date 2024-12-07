@@ -74,6 +74,10 @@ private:
 	ComPointer<ID3D12DescriptorHeap> rtvDescHeap;
 	D3D12_CPU_DESCRIPTOR_HANDLE rtvHandles[FRAME_COUNT];
 
+	ComPointer<ID3D12DescriptorHeap> dsvDescHeap;
+	D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle;
+    ComPointer<ID3D12Resource> depthStencilBuffer;
+
 	bool getBuffers();
 	void releaseBuffers();
 
