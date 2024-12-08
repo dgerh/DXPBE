@@ -30,11 +30,9 @@
     <ClCompile Include="ImGUI\imgui_widgets.cpp" />
     <ClCompile Include="ImGUI\misc\cpp\imgui_stdlib.cpp" />
     <ClCompile Include="Scene\ObjectScene.cpp" />
-    <ClCompile Include="Scene\PBDScene.cpp" />
     <ClCompile Include="Scene\PBMPMScene.cpp" />
     <ClCompile Include="Scene\FluidScene.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="PBD\particles.cpp" />
     <ClCompile Include="Scene\Camera.cpp" />
     <ClCompile Include="Scene\Geometry.cpp" />
     <ClCompile Include="Scene\Mesh.cpp" />
@@ -67,12 +65,10 @@
     <ClInclude Include="ImGUI\misc\cpp\imgui_stdlib.h" />
     <ClInclude Include="Scene\GridConstants.h" />
     <ClInclude Include="Scene\ObjectScene.h" />
-    <ClInclude Include="Scene\PBD.h" />
     <ClInclude Include="Scene\PBMPMScene.h" />
     <ClInclude Include="Scene\FluidScene.h" />
     <ClInclude Include="Scene\PhysicsScene.h" />
     <ClInclude Include="main.h" />
-    <ClInclude Include="PBD\particles.h" />
     <ClInclude Include="Scene\Camera.h" />
     <ClInclude Include="D3D\StructuredBuffer.h" />
     <ClInclude Include="Scene\Geometry.h" />
@@ -88,74 +84,6 @@
     <None Include="Shaders\FluidSurfaceConstruction\utils.hlsl" />
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="Shaders\BouncingPhysicsShaders\applyForce.hlsl">
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compute</ShaderType>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">6.0</ShaderModel>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Compute</ShaderType>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">6.0</ShaderModel>
-    </FxCompile>
-    <FxCompile Include="Shaders\BouncingPhysicsShaders\FaceToFaceConstraint.hlsl">
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compute</ShaderType>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">6.0</ShaderModel>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Compute</ShaderType>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">6.0</ShaderModel>
-    </FxCompile>
-    <FxCompile Include="Shaders\BouncingPhysicsShaders\Gram-SchmidtConstraint.hlsl">
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compute</ShaderType>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">6.0</ShaderModel>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Compute</ShaderType>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">6.0</ShaderModel>
-    </FxCompile>
-    <FxCompile Include="Shaders\BouncingPhysicsShaders\Gram-SchmidtRootSignature.hlsl">
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">RootSignature</ShaderType>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">rootsig_1.1</ShaderModel>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">RootSignature</ShaderType>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">rootsig_1.1</ShaderModel>
-      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">ROOTSIG</EntryPointName>
-      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">ROOTSIG</EntryPointName>
-    </FxCompile>
-    <FxCompile Include="Shaders\BouncingPhysicsShaders\PhysicsVertexShader.hlsl">
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">6.0</ShaderModel>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">6.0</ShaderModel>
-    </FxCompile>
-    <FxCompile Include="Shaders\BouncingPhysicsShaders\PhysicsRootSignature.hlsl">
-      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">ROOTSIG</EntryPointName>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">RootSignature</ShaderType>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">rootsig_1.1</ShaderModel>
-      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">ROOTSIG</EntryPointName>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">RootSignature</ShaderType>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">rootsig_1.1</ShaderModel>
-    </FxCompile>
-    <FxCompile Include="Shaders\BouncingPhysicsShaders\TestComputeShader.hlsl">
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compute</ShaderType>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">6.0</ShaderModel>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Compute</ShaderType>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">6.0</ShaderModel>
-    </FxCompile>
-    <FxCompile Include="Shaders\BouncingPhysicsShaders\TestComputeRootSignature.hlsl">
-      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">ROOTSIG</EntryPointName>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">RootSignature</ShaderType>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">rootsig_1.1</ShaderModel>
-      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">ROOTSIG</EntryPointName>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">RootSignature</ShaderType>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">rootsig_1.1</ShaderModel>
-    </FxCompile>
-    <FxCompile Include="Shaders\BouncingPhysicsShaders\VelocitySignature.hlsl">
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">RootSignature</ShaderType>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">rootsig_1.1</ShaderModel>
-      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">ROOTSIG</EntryPointName>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">RootSignature</ShaderType>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">rootsig_1.1</ShaderModel>
-      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">ROOTSIG</EntryPointName>
-    </FxCompile>
-    <FxCompile Include="Shaders\BouncingPhysicsShaders\VelocityUpdate.hlsl">
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compute</ShaderType>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">6.0</ShaderModel>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Compute</ShaderType>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">6.0</ShaderModel>
-    </FxCompile>
     <FxCompile Include="Shaders\FluidSurfaceConstruction\FluidMeshShader.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Mesh</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">6.5</ShaderModel>
