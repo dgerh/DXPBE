@@ -27,6 +27,7 @@ static bool meshletRenderType = false;
 static unsigned int renderModeType = 0; // 0 = both particles and mesh shading, 1 = just mesh shading, 2 = just particles
 static int fixedPointExponent = 7;
 static bool useGridVolume = true;
+static bool renderGrid = false;
 
 const char* modes[] = { "Mesh Shaded Fluid", "Particles", "Mesh Shaded Fluid with Particles" };
 
@@ -99,6 +100,8 @@ void drawImGUIWindow(PBMPMConstants& pbmpmConstants, ImGuiIO& io, unsigned int* 
     {
         *renderMode = renderModeType;
     }
+
+    ImGui::Checkbox("Render Grid", &renderGrid);
 
     ImGui::Checkbox("Render Meshlets", &meshletRenderType);
     *renderMeshlets = meshletRenderType;

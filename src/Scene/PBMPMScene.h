@@ -122,6 +122,8 @@ public:
 
 	PBMPMConstants getConstants() { return constants; }
 
+	std::vector<SimShape>& getSimShapes() { return shapes; }
+
 private:
 	DXContext* context;
 	RenderPipeline* renderPipeline;
@@ -164,6 +166,8 @@ private:
 	StructuredBuffer tempTileDataBuffer;
 
 	std::array<StructuredBuffer, 3> gridBuffers;
+
+	std::vector<SimShape> shapes;
 
 	void createBukkitSystem();
 

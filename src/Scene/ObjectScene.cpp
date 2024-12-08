@@ -1,7 +1,8 @@
 #include "ObjectScene.h"
+#include "GridConstants.h"
 
-ObjectScene::ObjectScene(DXContext* context, RenderPipeline* pipeline)
-	: Drawable(context, pipeline)
+ObjectScene::ObjectScene(DXContext* context, RenderPipeline* pipeline, std::vector<SimShape>& shapes)
+	: Drawable(context, pipeline), shapes(shapes)
 {
 	constructScene();
 }
@@ -11,23 +12,30 @@ void ObjectScene::constructScene()
 	renderPipeline->createPSOD();
 	renderPipeline->createPipelineState(context->getDevice());
 
-	inputStrings.push_back("objs\\wolf.obj");
-    inputStrings.push_back("objs\\saulgoodman.obj");
+	inputStrings.push_back("objs\\cube.obj");
 
-    XMFLOAT4X4 m1;
-    XMStoreFloat4x4(&m1, XMMatrixTranslation(0, 0, 0));
-    modelMatrices.push_back(m1);
+    XMFLOAT4X4 gridModelMatrix;
+    XMStoreFloat4x4(&gridModelMatrix, XMMatrixScaling(GRID_WIDTH, GRID_HEIGHT, GRID_DEPTH));
+    modelMatrices.push_back(gridModelMatrix);
 
-    XMFLOAT4X4 m2;
-    XMStoreFloat4x4(&m2, XMMatrixScaling(0.2f, 0.2f, 0.2f) * XMMatrixTranslation(-10, -8, 0));
-    modelMatrices.push_back(m2);
+    
+    for (const auto& shape : shapes) {
+        inputStrings.push_back("objs\\cube.obj");
+        XMFLOAT4X4 simShapeMatrix;
+        XMStoreFloat4x4(&simShapeMatrix, XMMatrixMultiply(
+
+            XMMatrixScaling(shape.halfSize.x * 2, shape.halfSize.y * 2, shape.halfSize.z * 2),
+            XMMatrixTranslation(shape.position.x - shape.halfSize.x, shape.position.y - shape.halfSize.y, shape.position.z - shape.halfSize.z)
+        ));
+        modelMatrices.push_back(simShapeMatrix);
+    }
 
     for (int i = 0; i < inputStrings.size(); i++) {
         auto string = inputStrings.at(i);
         auto m = modelMatrices.at(i);
-		/*Mesh newMesh = Mesh((std::filesystem::current_path() / string).string(), context, renderPipeline->getCommandList(), renderPipeline, m);
+		Mesh newMesh = Mesh((std::filesystem::current_path() / string).string(), context, renderPipeline->getCommandList(), renderPipeline, m, true);
 		meshes.push_back(newMesh);
-		sceneSize += newMesh.getNumTriangles();*/
+		sceneSize += newMesh.getNumTriangles();
 	}
 }
 
@@ -37,7 +45,8 @@ void ObjectScene::draw(Camera* camera) {
         auto cmdList = renderPipeline->getCommandList();
         cmdList->IASetVertexBuffers(0, 1, m.getVBV());
         cmdList->IASetIndexBuffer(m.getIBV());
-        cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+        //cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+        cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINELIST);
         // == RS ==
         //NO NEED TO RESET VIEWPORT??
         // == PSO ==

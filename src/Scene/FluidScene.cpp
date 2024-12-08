@@ -1,4 +1,5 @@
 #include "FluidScene.h"
+#include "GridConstants.h"
 
 FluidScene::FluidScene(DXContext* context, 
                        RenderPipeline* pipeline, 
@@ -112,6 +113,7 @@ float getRandomFloatInRange(float min, float max) {
 
 void FluidScene::constructScene() {
     int blocksPerEdge = 32;
+    float cellWidth = std::max(std::max(GRID_WIDTH, GRID_HEIGHT), GRID_DEPTH) / (blocksPerEdge * CELLS_PER_BLOCK_EDGE);
     gridConstants = { 0, {blocksPerEdge * CELLS_PER_BLOCK_EDGE, blocksPerEdge * CELLS_PER_BLOCK_EDGE, blocksPerEdge * CELLS_PER_BLOCK_EDGE}, {0.f, 0.f, 0.f}, 2.0f, kernelScale };
 
     // Create cells and blocks buffers

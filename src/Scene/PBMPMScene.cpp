@@ -1,4 +1,5 @@
 #include "PBMPMScene.h"
+#include "GridConstants.h"
 
 PBMPMScene::PBMPMScene(DXContext* context, RenderPipeline* pipeline, unsigned int instances)
 	: Drawable(context, pipeline), context(context), renderPipeline(pipeline), instanceCount(instances),
@@ -400,7 +401,7 @@ void PBMPMScene::constructScene() {
 	auto computeId = g2p2gPipeline.getCommandListID();
 
 	// Create Constant Data
-	constants = { {64, 64, 64}, 0.01, 9.8, 0.2, 0.02,
+	constants = { {GRID_WIDTH, GRID_HEIGHT, GRID_DEPTH}, 0.01, 9.8, 0.2, 0.02,
 		(unsigned int)std::ceil(std::pow(10, 7)),
 		1, 4, 30, 1, 0, 0, 0, 0, 0, 0, 5, 0.2 };
 
@@ -446,7 +447,6 @@ void PBMPMScene::constructScene() {
 	renderDispatchBuffer = StructuredBuffer(&renderDispatch, 5, sizeof(int));
 
 	// Shape Buffer
-	std::vector<SimShape> shapes;
 	shapes.push_back(SimShape(0, { 16, 40, 16}, 0, { 2, 2, 2 },
 		0, 0, 0, 1, 100));
 	shapeBuffer = StructuredBuffer(shapes.data(), shapes.size(), sizeof(SimShape));

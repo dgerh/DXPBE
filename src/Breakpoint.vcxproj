@@ -65,6 +65,7 @@
     <ClInclude Include="ImGUI\imstb_textedit.h" />
     <ClInclude Include="ImGUI\imstb_truetype.h" />
     <ClInclude Include="ImGUI\misc\cpp\imgui_stdlib.h" />
+    <ClInclude Include="Scene\GridConstants.h" />
     <ClInclude Include="Scene\ObjectScene.h" />
     <ClInclude Include="Scene\PBD.h" />
     <ClInclude Include="Scene\PBMPMScene.h" />

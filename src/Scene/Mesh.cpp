@@ -1,7 +1,7 @@
 #include "Mesh.h"
 
-Mesh::Mesh(std::string fileLocation, DXContext* context, ID3D12GraphicsCommandList6* cmdList, RenderPipeline* pipeline, XMFLOAT4X4 p_modelMatrix) {
-	loadMesh(fileLocation);
+Mesh::Mesh(std::string fileLocation, DXContext* context, ID3D12GraphicsCommandList6* cmdList, RenderPipeline* pipeline, XMFLOAT4X4 p_modelMatrix, bool doWireframeIndices) {
+	loadMesh(fileLocation, doWireframeIndices);
     vertexBuffer = VertexBuffer(vertexPositions, (UINT)(vertices.size() * sizeof(XMFLOAT3)), (UINT)sizeof(XMFLOAT3));
     indexBuffer = IndexBuffer(indices, (UINT)(indices.size() * sizeof(unsigned int)));
 
@@ -30,7 +30,7 @@ Mesh::Mesh(std::string fileLocation, DXContext* context, ID3D12GraphicsCommandLi
     cmdList->ResourceBarrier(2, barriers);
 }
 
-void Mesh::loadMesh(std::string fileLocation) {
+void Mesh::loadMesh(std::string fileLocation, bool doWireframeIndices) {
     std::ifstream file(fileLocation);
     if (!file.is_open()) {
         std::cerr << "Error: Could not open the file " << fileLocation << std::endl;
@@ -96,11 +96,27 @@ void Mesh::loadMesh(std::string fileLocation) {
         vertices[i].nor = normals[i];
     }
 
-    for (auto face : faces) {
-        numTriangles++;
-        indices.push_back(face[0]);
-        indices.push_back(face[1]);
-        indices.push_back(face[2]);
+    if (!doWireframeIndices) {
+        for (auto face : faces) {
+            numTriangles++;
+            indices.push_back(face[0]);
+            indices.push_back(face[1]);
+            indices.push_back(face[2]);
+        }
+    }
+    else {
+        //wireframe indices, only works for cubes
+        std::vector<std::pair<int, int>> edges = {
+            {0, 1}, {1, 2}, {2, 3}, {3, 0},
+            {4, 5}, {5, 6}, {6, 7}, {7, 4},
+            {0, 4}, {1, 5}, {2, 6}, {3, 7}
+        };
+
+        for (const auto& edge : edges) {
+            indices.push_back(edge.first);
+            indices.push_back(edge.second);
+            numTriangles++;
+        }
     }
 
     file.close();

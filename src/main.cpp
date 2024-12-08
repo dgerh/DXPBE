@@ -67,14 +67,15 @@ int main() {
             pbmpmIterConstants.mouseActivation = 0;
         }
 
+        //compute pbmpm + mesh shader
+        scene.compute();
+
         //get pipelines
         auto renderPipeline = scene.getPBMPMRenderPipeline();
         auto meshPipeline = scene.getFluidMeshPipeline();
+        auto objectPipeline = scene.getObjectPipeline();
         //whichever pipeline renders first should begin and end the frame
         auto firstPipeline = meshPipeline;
-
-        //compute pbmpm + mesh shader
-        scene.compute();
 
         //begin frame
         Window::get().beginFrame(firstPipeline->getCommandList());
@@ -114,12 +115,19 @@ int main() {
 
         context.executeCommandList(renderPipeline->getCommandListID());
 
+        //object render pass
+        Window::get().setRT(objectPipeline->getCommandList());
+        Window::get().setViewport(vp, objectPipeline->getCommandList());
+        if (renderGrid) scene.drawObject();
+        context.executeCommandList(objectPipeline->getCommandListID());
+
         //end frame
         Window::get().endFrame(firstPipeline->getCommandList());
 
         Window::get().present();
 		context.resetCommandList(renderPipeline->getCommandListID());
         context.resetCommandList(meshPipeline->getCommandListID());
+        context.resetCommandList(objectPipeline->getCommandListID());
     }
 
     // Scene should release all resources, including their pipelines
