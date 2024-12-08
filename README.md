@@ -66,3 +66,22 @@ Helpful resources:
 - [PBMPM](https://www.ea.com/seed/news/siggraph2024-pbmpm)
 - [Fluid Mesh Shading](https://dl.acm.org/doi/10.1145/3651285)
 - For the DX12 basics and compointer class, we used this great tutorial series resource: https://github.com/Ohjurot/D3D12Ez
+
+# Citations / Attributions
+
+@article{10.1145/3651285,
+    author = {Nishidate, Yuki and Fujishiro, Issei},
+    title = {Efficient Particle-Based Fluid Surface Reconstruction Using Mesh Shaders and Bidirectional Two-Level Grids},
+    year = {2024},
+    issue_date = {May 2024},
+    publisher = {Association for Computing Machinery},
+    address = {New York, NY, USA},
+    volume = {7},
+    number = {1},
+    url = {https://doi.org/10.1145/3651285},
+    doi = {10.1145/3651285},
+    journal = {Proc. ACM Comput. Graph. Interact. Tech.},
+    month = {may},
+    articleno = {1},
+    numpages = {14},
+}
