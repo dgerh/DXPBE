@@ -522,12 +522,12 @@ void main(uint indexInGroup : SV_GroupIndex, uint3 groupId : SV_GroupID)
                          
                          particle.deformationGradient = mul(mul(svdResult.U, diag(svdResult.Sigma)), svdResult.Vt);
                     }
-                    /*else if (particle.material == MaterialSnow) {
-                        //SVDResult svdResult = svd(particle.deformationGradient);
-                        // Even stricter snow parameters
-                        float criticalCompression = 5.0e-3;  // Much smaller to resist compression
-                        float criticalStretch = 2.0e-3;      // Much smaller to resist stretching
-                        float hardeningCoeff = 40.0;         // Much stronger hardening
+                    else if (particle.material == MaterialSnow) {
+                        SVDResult svdResult = svd(particle.deformationGradient);
+
+                        float criticalCompression = 0.025f;  
+                        float criticalStretch = 0.025f;      
+                        float hardeningCoeff = 10.0f;        
 
                         // Very tight elastic bounds
                         float3 elasticSigma = clamp(svdResult.Sigma,
@@ -543,7 +543,7 @@ void main(uint indexInGroup : SV_GroupIndex, uint3 groupId : SV_GroupID)
                         float3x3 Fp = mul(particle.deformationGradient, FeInverse);
                         particle.deformationGradient = expandToFloat4x4(mul(Fe * hardening, Fp));
 
-                    }*/
+                    }
                     
                     if (particle.material != MaterialSnow) {
                         particle.deformationGradient = expandToFloat4x4(mul(mul(svdResult.U, diag(svdResult.Sigma)), svdResult.Vt));
@@ -689,57 +689,51 @@ void main(uint indexInGroup : SV_GroupIndex, uint3 groupId : SV_GroupID)
                 // Apply relaxation
                 particle.deformationDisplacement += elasticRelaxation * diff;
             }
-            /*else if (particle.material == MaterialSnow) {
-                float3x3 F = mul(Identity + particle.deformationDisplacement, particle.deformationGradient);
-                SVDResult svdResult = svd(F);
+            else if (particle.material == MaterialSnow) {
+                SVDResult svdResult = svd(particle.deformationGradient);
 
-                // Much stronger parameters
-                float criticalCompression = 2.0e-2; 
-                float criticalStretch = 1.0e-2;
-                float hardeningCoeff = 15.0;           // Very strong hardening
-                float snowViscosity = 0.04f;            // High viscosity for stability
-                float repulsionStrength = 0.06f;        // Very strong repulsion
+                
+                float criticalCompression = 0.5f;  
+                float criticalStretch = 0.5f;      
 
-                float3 elasticSigma = clamp(svdResult.Sigma,
+               
+                float hardeningCoeff = 1.0f;
+
+                float3 elasticSigma = clamp(
+                    svdResult.Sigma,
                     float3(1.0f - criticalCompression, 1.0f - criticalCompression, 1.0f - criticalCompression),
-                    float3(1.0f + criticalStretch, 1.0f + criticalStretch, 1.0f + criticalStretch));
+                    float3(1.0f + criticalStretch, 1.0f + criticalStretch, 1.0f + criticalStretch)
+                );
 
                 float Je = elasticSigma.x * elasticSigma.y * elasticSigma.z;
                 float hardening = exp(hardeningCoeff * (1.0f - Je));
 
-                // Very strong compression resistance
-                if (Je < 0.98) { // Almost no compression allowed
-                    float compressionRatio = (0.98 - Je) / 0.98;
-                    float repulsion = repulsionStrength * compressionRatio;
-                    float3x3 repulsionDir = mul(mul(svdResult.U, Identity), svdResult.Vt);
-                    particle.deformationDisplacement += repulsion * repulsionDir;
-                }
-
-                // Very stiff elastic response
+                
                 float3x3 Fe = mul(mul(svdResult.U, diag(elasticSigma)), svdResult.Vt);
-                float3x3 invF = inverse(F);
-                float3x3 diff = mul(Fe * hardening, invF) - Identity - particle.deformationDisplacement;
 
-                // Quick shape restoration
-                float relaxationRate = 0.01f;
-                particle.deformationDisplacement += snowViscosity * diff * relaxationRate;
+                
+                float3 invElasticSigma = float3(1.0f / elasticSigma.x, 1.0f / elasticSigma.y, 1.0f / elasticSigma.z);
+                float3x3 FeInverse = mul(mul(svdResult.U, diag(invElasticSigma)), svdResult.Vt);
+                float3x3 Fp = mul(particle.deformationGradient, FeInverse);
 
-                // Very strong damping for stability
-                float3x3 deviatoric = -1.0 * (particle.deformationDisplacement + transpose(particle.deformationDisplacement));
-                float3x3 dampingMatrix = mul(mul(svdResult.U,
-                    float3x3(2.0, 0, 0,    // Very strong damping in both directions
-                        0, 2.0, 0,
-                        0, 0, 2.0)),
-                    svdResult.Vt);
+                
+                float plasticRelaxation = 0.99f;
+                float3x3 relaxedFp = lerp(Fp, Identity, plasticRelaxation);
 
-                particle.deformationDisplacement += snowViscosity * 0.9 * mul(deviatoric, dampingMatrix);
+                
+                float reducedHardening = lerp(1.0f, hardening, 0.1f);
 
-                // Extreme velocity damping to strongly resist movement
-                float deformationRate = length(particle.displacement);
-                float velocityDamping = saturate(deformationRate * 4.0);
-                particle.displacement *= (1.0 - velocityDamping * snowViscosity * 1.5);
+                particle.deformationGradient = expandToFloat4x4(mul(Fe * reducedHardening, relaxedFp));
+
+                float viscosity = 1.0f;
+                float3x3 deviatoric = -1.0f * (particle.deformationDisplacement + transpose(particle.deformationDisplacement));
+                particle.deformationDisplacement += viscosity * 0.5f * deviatoric;
+
+                float alpha = 0.5f * (1.0f / (Je + 1e-3f) - tr3D(particle.deformationDisplacement) - 1.0f);
+                float volumeRelax = 0.2f;
+                particle.deformationDisplacement += volumeRelax * alpha * Identity;
               
-            }*/
+            }
 
             // P2G
 

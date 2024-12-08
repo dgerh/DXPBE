@@ -404,9 +404,9 @@ void PBMPMScene::constructScene() {
 
 	//liquid
 	
-	constants = { {GRID_WIDTH, GRID_HEIGHT, GRID_DEPTH}, 0.01, 9.8, 0.2, 0.02,
+	/*constants = { {GRID_WIDTH, GRID_HEIGHT, GRID_DEPTH}, 0.01, 9.8, 0.2, 0.02,
 		(unsigned int)std::ceil(std::pow(10, 7)),
-		1, 4, 30, 1, 0, 0, 0, 0, 0, 0, 5, 0.2, 0, 0};
+		1, 4, 30, 1, 0, 0, 0, 0, 0, 0, 5, 0.2, 0, 0};*/
 	//sand
 	/*constants = { {GRID_WIDTH, GRID_HEIGHT, GRID_DEPTH}, 0.01,2.5, 0.4, 0.2,
 		(unsigned int)std::ceil(std::pow(10, 7)),
@@ -459,9 +459,9 @@ void PBMPMScene::constructScene() {
 
 
 
-	/*constants = { {64, 64, 64}, 0.01,2.5, 1.5, 0.1,
+	constants = { {64, 64, 64}, 0.01,2.5, 1.5, 0.1,
 		(unsigned int)std::ceil(std::pow(10, 7)),
-		1, 3,30, 1, 0, 0, 0, 0, 0, 0, 5, 0.9, 0, 0 };*/
+		1, 3,30, 1, 0, 0, 0, 0, 0, 0, 5, 0.9, 0, 0 };
 
 	//XMUINT3 gridSize; //2 -> 3
 	//float deltaTime;
@@ -492,7 +492,7 @@ void PBMPMScene::constructScene() {
 	// Create Model Matrix
 	modelMat *= XMMatrixTranslation(0.0f, 0.0f, 0.0f);
 
-	float radius = 1;
+	float radius = 0.2;
 	// Create Vertex & Index Buffer
 	auto circleData = generateSphere(radius, 16, 16);
 	indexCount = (unsigned int)circleData.second.size();
@@ -533,8 +533,8 @@ void PBMPMScene::constructScene() {
 	// Shape Buffer
 
 	std::vector<SimShape> shapes;
-	shapes.push_back(SimShape(0, { 32, 32, 32}, 0, { 10, 10, 10 },
-		0, 0, 0, 1, 100));
+	shapes.push_back(SimShape(0, { 16, 32, 16}, 0, { 10, 10, 10 },
+		0, 3, 4, 1, 100));
 
 	shapeBuffer = StructuredBuffer(shapes.data(), shapes.size(), sizeof(SimShape));
 
