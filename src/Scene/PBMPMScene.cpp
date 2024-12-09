@@ -391,11 +391,11 @@ void PBMPMScene::constructScene() {
 	
 	constants = { {GRID_WIDTH, GRID_HEIGHT, GRID_DEPTH},
 		0.01f,
-		2.0f,
+		5.0f,
 		1.2f,
 		0.3f,
 		(unsigned int)std::ceil(std::pow(10, 7)),
-		0,
+		1,
 		3,
 		50.0f,
 		2,
@@ -407,8 +407,8 @@ void PBMPMScene::constructScene() {
 		0,
 		10,
 		0.4f,
-		0.f,
-		0.f,
+		1.5f,
+		2.0f,
 	};
 
 	// Create Vertex & Index Buffer
@@ -454,8 +454,8 @@ void PBMPMScene::constructScene() {
 	shapes.push_back(SimShape(0, { 48, 32, 48}, 0, { 3, 3, 3 },
   	0, 0, 0, 1, 100));
 
-	shapes.push_back(SimShape(0, { 32, 32, 32 }, 0, { 3, 3, 3 },
-		0, 3, 0, 1, 100));
+	shapes.push_back(SimShape(0, { 32, 32, 32 }, 0, {  8, 8, 8 },
+		0, 3, 1, 1, 100));
 
 	shapeBuffer = StructuredBuffer(shapes.data(), (unsigned int)shapes.size(), sizeof(SimShape));
 

@@ -354,7 +354,9 @@ void main(uint indexInGroup : SV_GroupIndex, uint3 groupId : SV_GroupID)
             float3x3 B = ZeroMatrix;
             float3 d = float3(0, 0, 0);
             float volume = 0.0;
-            
+
+            int currentMaterial = material;
+
             // Iterate over local 3x3 neighborhood
             for (int i = 0; i < 3; i++)
             {
@@ -380,16 +382,28 @@ void main(uint indexInGroup : SV_GroupIndex, uint3 groupId : SV_GroupID)
                         int fixedPoint2;
                         InterlockedAdd(g_tempTileData[(groupId.x * TileDataSize) + gridVertexIdx + 2], 0, fixedPoint2);
 
+                        uint particleIndexInCell = g_bukkitParticleData[threadData.rangeStart + indexInGroup];
+                        int cellMaterial = g_materials[particleIndexInCell];
+
+
                         float3 weightedDisplacement = weight * float3(
                             decodeFixedPoint(fixedPoint0, g_simConstants.fixedPointMultiplier),
                             decodeFixedPoint(fixedPoint1, g_simConstants.fixedPointMultiplier),
                             decodeFixedPoint(fixedPoint2, g_simConstants.fixedPointMultiplier));
 
-                        float3 offset = float3(neighborCellIndex) - p + 0.5;
-                        B += outerProduct(weightedDisplacement, offset);
+
+                        if (cellMaterial == currentMaterial)
+                        {
+                            float3 offset = float3(neighborCellIndex) - p + 0.5;
+                            B += outerProduct(weightedDisplacement, offset);
+                        }
+
+
+                       /* float3 offset = float3(neighborCellIndex) - p + 0.5;
+                        B += outerProduct(weightedDisplacement, offset);*/
                         d += weightedDisplacement;
 
-                        if (g_simConstants.useGridVolumeForLiquid != 0)
+                        if (g_simConstants.useGridVolumeForLiquid != 0 && material == MaterialLiquid)
                         {
                             int fixedPoint4;
                             InterlockedAdd(g_tempTileData[(groupId.x * TileDataSize) + gridVertexIdx + 4], 0, fixedPoint4);
@@ -453,7 +467,8 @@ void main(uint indexInGroup : SV_GroupIndex, uint3 groupId : SV_GroupID)
                         // Drucker-prager elastoplasticity for sand animation. ACM Trans. Graph. 35, 4, Article 103 (July 2016), 12 pages.
                         // https://doi.org/10.1145/2897824.2925906
                         
-                        
+                       
+
 
                         float sinPhi = sin(g_simConstants.frictionAngle * 3.14159f / 180.0f);
                         float alpha = sqrt(2.0f / 3.0f) * (2.0f * sinPhi) / (3.0f - sinPhi);
@@ -525,7 +540,7 @@ void main(uint indexInGroup : SV_GroupIndex, uint3 groupId : SV_GroupID)
                          
                          particle.deformationGradient = mul(mul(svdResult.U, diag(svdResult.Sigma)), svdResult.Vt);
                     }
-                    else if (particle.material == MaterialSnow) {
+                    else if (material == MaterialSnow) {
                         SVDResult svdResult = svd(particle.deformationGradient);
 
                         float criticalCompression = 0.025f;  
@@ -699,7 +714,7 @@ void main(uint indexInGroup : SV_GroupIndex, uint3 groupId : SV_GroupID)
                 // Apply relaxation
                 particle.deformationDisplacement += elasticRelaxation * diff;
             }
-            else if (particle.material == MaterialSnow) {
+            else if (material == MaterialSnow) {
                 SVDResult svdResult = svd(particle.deformationGradient);
 
                 
