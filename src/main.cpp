@@ -99,15 +99,15 @@ int main() {
         }
 
         //compute pbmpm + mesh shader
-        scene.compute();
+        scene.compute(renderMode != 2);
 
         //get pipelines
-        auto renderPipeline = scene.getPBMPMRenderPipeline();
+        auto pbmpmPipeline = scene.getPBMPMRenderPipeline();
         auto meshPipeline = scene.getFluidMeshPipeline();
         auto objectWirePipeline = scene.getObjectWirePipeline();
         auto objectSolidPipeline = scene.getObjectSolidPipeline();
         //whichever pipeline renders first should begin and end the frame
-        auto firstPipeline = objectWirePipeline;
+        auto firstPipeline = objectSolidPipeline;
 
         //begin frame
         Window::get().beginFrame(firstPipeline->getCommandList());
@@ -116,28 +116,16 @@ int main() {
         D3D12_VIEWPORT vp;
         Window::get().createViewport(vp, firstPipeline->getCommandList());
 
-        //wire object render pass
-        Window::get().setRT(objectWirePipeline->getCommandList());
-        Window::get().setViewport(vp, objectWirePipeline->getCommandList());
-        if (renderGrid) scene.drawWireObjects();
-        context.executeCommandList(objectWirePipeline->getCommandListID());
-
         //solid object render pass
         Window::get().setRT(objectSolidPipeline->getCommandList());
         Window::get().setViewport(vp, objectSolidPipeline->getCommandList());
         scene.drawSolidObjects();
         context.executeCommandList(objectSolidPipeline->getCommandListID());
 
-        //mesh render pass
-        Window::get().setRT(meshPipeline->getCommandList());
-        Window::get().setViewport(vp, meshPipeline->getCommandList());
-        if (renderMode != 1) scene.drawFluid(renderMeshlets);
-        context.executeCommandList(meshPipeline->getCommandListID());
-
         //particles + imgui render pass
-        Window::get().setRT(renderPipeline->getCommandList());
-        Window::get().setViewport(vp, renderPipeline->getCommandList());
-        if (renderMode != 0) scene.drawPBMPM();
+        Window::get().setRT(pbmpmPipeline->getCommandList());
+        Window::get().setViewport(vp, pbmpmPipeline->getCommandList());
+        scene.drawPBMPM(renderMode);
 
         //set up ImGUI for frame
         ImGui_ImplDX12_NewFrame();
@@ -159,16 +147,28 @@ int main() {
             pbmpmCurrConstants = pbmpmIterConstants;
         }
 
-        renderPipeline->getCommandList()->SetDescriptorHeaps(1, &imguiSRVHeap);
-        ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), renderPipeline->getCommandList());
+        pbmpmPipeline->getCommandList()->SetDescriptorHeaps(1, &imguiSRVHeap);
+        ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), pbmpmPipeline->getCommandList());
 
-        context.executeCommandList(renderPipeline->getCommandListID());
+        context.executeCommandList(pbmpmPipeline->getCommandListID());
+
+        //mesh render pass
+        Window::get().setRT(meshPipeline->getCommandList());
+        Window::get().setViewport(vp, meshPipeline->getCommandList());
+        if (renderMode != 2) scene.drawFluid(renderMeshlets);
+        context.executeCommandList(meshPipeline->getCommandListID());
+
+        //wire object render pass
+        Window::get().setRT(objectWirePipeline->getCommandList());
+        Window::get().setViewport(vp, objectWirePipeline->getCommandList());
+        if (renderGrid) scene.drawWireObjects();
+        context.executeCommandList(objectWirePipeline->getCommandListID());
 
         //end frame
         Window::get().endFrame(firstPipeline->getCommandList());
 
         Window::get().present();
-		context.resetCommandList(renderPipeline->getCommandListID());
+		context.resetCommandList(pbmpmPipeline->getCommandListID());
         context.resetCommandList(meshPipeline->getCommandListID());
         context.resetCommandList(objectWirePipeline->getCommandListID());
         context.resetCommandList(objectSolidPipeline->getCommandListID());

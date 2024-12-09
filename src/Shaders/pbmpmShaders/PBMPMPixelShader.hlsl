@@ -3,6 +3,13 @@
 // Particle materials as an SRV at register t1
 StructuredBuffer<int> materials : register(t1);
 
+cbuffer CameraMatrices : register(b0) {
+    float4x4 viewMatrix;        // 16 floats
+    float4x4 projectionMatrix;  // 16 floats
+    float4x4 modelMatrix;       // 16 floats
+    unsigned int renderMode;
+};
+
 struct PSInput
 {
     float4 Position : SV_Position; // Position passed from vertex shader
@@ -14,6 +21,8 @@ float4 main(PSInput input) : SV_Target
 {
     // Use the instance ID to retrieve the material
     int materialType = materials[input.InstanceID];
+
+if (renderMode == 0 && materialType == 0) discard;
 
 // Determine the material color based on the material index (example logic)
 if (materialType == 0)

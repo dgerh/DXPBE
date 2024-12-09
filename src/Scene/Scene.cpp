@@ -50,16 +50,18 @@ MeshPipeline* Scene::getFluidMeshPipeline() {
 	return &fluidMeshPipeline;
 }
 
-void Scene::compute() {
+void Scene::compute(float isMeshShading) {
 	pbmpmScene.compute();
-	fluidScene.compute(
-		pbmpmScene.getPositionBuffer(),
-		pbmpmScene.transferAndGetNumParticles()
-	);
+	if (isMeshShading) {
+		fluidScene.compute(
+			pbmpmScene.getPositionBuffer(),
+			pbmpmScene.transferAndGetNumParticles()
+		);
+	}
 }
 
-void Scene::drawPBMPM() {
-	pbmpmScene.draw(camera);
+void Scene::drawPBMPM(unsigned int renderMode) {
+	pbmpmScene.draw(camera, renderMode);
 }
 
 void Scene::drawFluid(unsigned int renderMeshlets) {

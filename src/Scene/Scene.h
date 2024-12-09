@@ -17,8 +17,8 @@ public:
 	RenderPipeline* getPBMPMRenderPipeline();
 	MeshPipeline* getFluidMeshPipeline();
 
-	void compute();
-	void drawPBMPM();
+	void compute(float isMeshShading = false);
+	void drawPBMPM(unsigned int renderMode);
 	void drawFluid(unsigned int renderMeshlets);
 	void drawWireObjects();
 	void drawSolidObjects();

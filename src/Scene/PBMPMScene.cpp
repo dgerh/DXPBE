@@ -398,7 +398,7 @@ void PBMPMScene::constructScene() {
 		1,
 		3,
 		50.0f,
-		2,
+		3,
 		0,
 		0,
 		0,
@@ -456,6 +456,7 @@ void PBMPMScene::constructScene() {
 
 	shapes.push_back(SimShape(0, { 32, 32, 32 }, 0, {  8, 8, 8 },
 		0, 3, 1, 1, 100));
+
 
 	shapeBuffer = StructuredBuffer(shapes.data(), (unsigned int)shapes.size(), sizeof(SimShape));
 
@@ -677,7 +678,7 @@ void PBMPMScene::compute() {
 	//}
 }
 
-void PBMPMScene::draw(Camera* cam) {
+void PBMPMScene::draw(Camera* cam, unsigned int renderMode) {
 	auto cmdList = renderPipeline->getCommandList();
 
 	// IA
@@ -701,6 +702,7 @@ void PBMPMScene::draw(Camera* cam) {
 	cmdList->SetGraphicsRoot32BitConstants(0, 16, &viewMat, 0);
 	cmdList->SetGraphicsRoot32BitConstants(0, 16, &projMat, 16);
 	cmdList->SetGraphicsRoot32BitConstants(0, 16, &modelMat, 32);
+	cmdList->SetGraphicsRoot32BitConstants(0, 1, &renderMode, 48);
 	cmdList->SetGraphicsRootDescriptorTable(1, positionBuffer.getSRVGPUDescriptorHandle()); // Descriptor table slot 1 for position SRV
 
 	auto indirectBarrier = CD3DX12_RESOURCE_BARRIER::Transition(
