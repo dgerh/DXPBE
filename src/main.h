@@ -68,43 +68,94 @@ ImGuiIO& initImGUI(DXContext& context) {
     return io;
 }
 
-void drawImGUIWindow(PBMPMConstants& pbmpmConstants, ImGuiIO& io, unsigned int* renderMeshlets, unsigned int* renderMode, float* isovalue, float* kernelScale) {
+void drawImGUIWindow(PBMPMConstants& pbmpmConstants, ImGuiIO& io, unsigned int* renderMeshlets, unsigned int* renderMode, float* isovalue, float* kernelScale, float* kernelRadius, unsigned int* substepCount, int numParticles) {
     ImGui::Begin("Scene Options");
 
     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
+    ImGui::Text("Number of Particles: %d", numParticles);
 
-    ImGui::TextColored({0, 1, 0, 1}, "Simulation Parameters");
+    if (ImGui::CollapsingHeader("Simulation Parameters")) {
+        ImGui::SliderFloat("Gravity Strength", &pbmpmConstants.gravityStrength, 0.0f, 20.0f);
+        ImGui::SliderFloat("Liquid Relaxation", &pbmpmConstants.liquidRelaxation, 0.0f, 10.0f);
+        ImGui::SliderFloat("Liquid Viscosity", &pbmpmConstants.liquidViscosity, 0.0f, 1.0f);
+        ImGui::SliderFloat("Friction Angle", &pbmpmConstants.frictionAngle, 0.0f, 90.0f);
 
-    ImGui::SliderFloat("Gravity Strength", &pbmpmConstants.gravityStrength, 0.0f, 20.0f);
+        ImGui::SliderFloat("Elastic Relaxation", &pbmpmConstants.elasticRelaxation, 0.0f, 10.0f);
+        ImGui::SliderFloat("Elastic Ratio", &pbmpmConstants.elasticityRatio, 0.0f, 2.0f);
 
-    ImGui::SliderFloat("Liquid Relaxation", &pbmpmConstants.liquidRelaxation, 0.0f, 10.0f);
-    ImGui::SliderFloat("Liquid Viscosity", &pbmpmConstants.liquidViscosity, 0.0f, 1.0f);
-    ImGui::SliderFloat("Friction Angle", &pbmpmConstants.frictionAngle, 0.0f, 90.0f);
+        ImGui::SliderInt("Particles Per Cell Axis", (int*)&pbmpmConstants.particlesPerCellAxis, 1, 8);
+        ImGui::SliderInt("Fixed Point Multiplier", (int*)&fixedPointExponent, 4, 13);
+        pbmpmConstants.fixedPointMultiplier = (unsigned int)pow(10, fixedPointExponent);
 
-    ImGui::SliderInt("Particles Per Cell Axis", (int*)&pbmpmConstants.particlesPerCellAxis, 1, 8);
-    ImGui::SliderInt("Fixed Point Multiplier", (int*)&fixedPointExponent, 4, 13);
-    pbmpmConstants.fixedPointMultiplier = pow(10, fixedPointExponent);
+        ImGui::SliderFloat("Border Friction", &pbmpmConstants.borderFriction, 0.0f, 1.0f);
 
-    ImGui::SliderFloat("Border Friction", &pbmpmConstants.borderFriction, 0.0f, 1.0f);
+        ImGui::SliderInt("Iteration Count", (int*)&pbmpmConstants.iterationCount, 1, 10);
+        ImGui::SliderInt("Substep Count", (int*)substepCount, 1, 20);
 
-    ImGui::Checkbox("Use Grid Volume for Liquid", (bool*)&useGridVolume);
-    pbmpmConstants.useGridVolumeForLiquid = useGridVolume;
-
-    ImGui::TextColored({ 0, 1, 0, 1 }, "Mesh Shading Parameters");
-    ImGui::SliderFloat("Isovalue", isovalue, 0.0f, 1.0f);
-    ImGui::SliderFloat("Kernel Scale", kernelScale, 0.1f, 5.f);
-
-    ImGui::TextColored({ 0, 1, 0, 1 }, "Render Parameters");
-
-    if (ImGui::Combo("Select Render Mode", (int*)&renderModeType, modes, IM_ARRAYSIZE(modes)))
-    {
-        *renderMode = renderModeType;
+        ImGui::Checkbox("Use Grid Volume for Liquid", (bool*)&useGridVolume);
+        pbmpmConstants.useGridVolumeForLiquid = useGridVolume;
     }
 
-    ImGui::Checkbox("Render Grid", &renderGrid);
+    if (ImGui::CollapsingHeader("Mesh Shading Parameters")) {
+        ImGui::TextColored({ 0, 1, 0, 1 }, "Mesh Shading Parameters");
+        ImGui::SliderFloat("Isovalue", isovalue, 0.01f, 1.0f);
+        ImGui::SliderFloat("Kernel Scale", kernelScale, 2.5f, 12.0f);
+        ImGui::SliderFloat("Kernel Radius", kernelRadius, 0.3f, 3.0f);
+    }
 
-    ImGui::Checkbox("Render Meshlets", &meshletRenderType);
-    *renderMeshlets = meshletRenderType;
+    if (ImGui::CollapsingHeader("Render Parameters")) {
+        if (ImGui::Combo("Select Render Mode", (int*)&renderModeType, modes, IM_ARRAYSIZE(modes)))
+        {
+            *renderMode = renderModeType;
+        }
+
+        ImGui::Checkbox("Render Grid", &renderGrid);
+
+        ImGui::Checkbox("Render Meshlets", &meshletRenderType);
+        *renderMeshlets = meshletRenderType;
+    }
 
     ImGui::End();
+}
+
+void ComputeMouseRay(
+    HWND hwnd,
+    float ndcX,
+    float ndcY,
+    const XMMATRIX& projectionMatrix,
+    const XMMATRIX& viewMatrix,
+    XMFLOAT4& rayOrigin,
+    XMFLOAT4& rayDirection
+) {
+    // Invert the projection and view matrices
+    XMMATRIX invProj = XMMatrixInverse(nullptr, projectionMatrix);
+    XMMATRIX invView = XMMatrixInverse(nullptr, viewMatrix);
+
+    // Define the mouse's NDC position on the near and far planes
+    XMVECTOR ndcNear = XMVectorSet(ndcX, ndcY, 0.0f, 1.0f); // Near plane
+    XMVECTOR ndcFar = XMVectorSet(ndcX, ndcY, 1.0f, 1.0f);   // Far plane
+
+    // Unproject the NDC points to view space
+    XMVECTOR viewNear = XMVector3TransformCoord(ndcNear, invProj);
+    XMVECTOR viewFar = XMVector3TransformCoord(ndcFar, invProj);
+
+    // Transform the points from view space to world space
+    XMVECTOR worldNear = XMVector3TransformCoord(viewNear, invView);
+    XMVECTOR worldFar = XMVector3TransformCoord(viewFar, invView);
+
+    // Calculate the ray origin (camera position) and direction
+    rayOrigin = XMFLOAT4(
+        XMVectorGetX(worldNear),
+        XMVectorGetY(worldNear),
+        XMVectorGetZ(worldNear),
+        1.0f
+    );
+
+    XMVECTOR rayDir = XMVector3Normalize(XMVectorSubtract(worldFar, worldNear));
+    rayDirection = XMFLOAT4(
+        XMVectorGetX(rayDir),
+        XMVectorGetY(rayDir),
+        XMVectorGetZ(rayDir),
+        0.0f
+    );
 }

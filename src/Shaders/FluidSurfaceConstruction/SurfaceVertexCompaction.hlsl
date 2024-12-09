@@ -1,10 +1,6 @@
 #include "SurfaceVertexCompactionRootSig.hlsl"
 #include "../constants.h"
 
-struct Uniforms {
-    int3 gridDim;
-};
-
 // Inputs
 // SRV for surface vertices buffer
 StructuredBuffer<int> surfaceVertices : register(t0);
@@ -14,7 +10,7 @@ RWStructuredBuffer<int> surfaceVertexIndices : register(u0);
 RWStructuredBuffer<int3> surfaceVertDensityDispatch : register(u1);
 
 // Constant buffer (root constant)
-ConstantBuffer<Uniforms> cb : register(b0);
+ConstantBuffer<BilevelUniformGridConstants> cb : register(b0);
 
 /*
     Similar to SurfaceBlockDetection, this is effectively a stream compaction step. Again, instead of following the paper directly,
@@ -24,7 +20,7 @@ ConstantBuffer<Uniforms> cb : register(b0);
 */
 [numthreads(SURFACE_VERTEX_COMPACTION_THREADS_X, 1, 1)]
 void main(uint3 globalThreadId : SV_DispatchThreadID) {
-    if (globalThreadId.x >= (cb.gridDim.x + 1) * (cb.gridDim.y + 1) * (cb.gridDim.z + 1)) {
+    if (globalThreadId.x >= (cb.dimensions.x + 1) * (cb.dimensions.y + 1) * (cb.dimensions.z + 1)) {
         return;
     }
 

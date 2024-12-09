@@ -21,6 +21,12 @@ int main() {
     //set mouse to use the window
     mouse->SetWindow(Window::get().getHWND());
 
+	// Get the client area of the window
+    RECT rect;
+    GetClientRect(Window::get().getHWND(), &rect);
+    float clientWidth = static_cast<float>(rect.right - rect.left);
+    float clientHeight = static_cast<float>(rect.bottom - rect.top);
+
     //initialize scene
     Scene scene{camera.get(), &context};
 
@@ -46,25 +52,50 @@ int main() {
         camera->kmStateCheck(kState, mState);
 
         if (mState.rightButton) {
+
+            if (kState.LeftShift) {
+                // Pulling Fluid
+                pbmpmIterConstants.mouseFunction = 2;
+			}
+            else if (kState.LeftAlt) {
+                // Grab Fluid Ball
+                pbmpmIterConstants.mouseFunction = 1;
+            }
+            else {
+				// Pushing Fluid
+                pbmpmIterConstants.mouseFunction = 0;
+			}
+
             //enable mouse force
             pbmpmIterConstants.mouseActivation = 1;
 
-            POINT cursorPos;
-            GetCursorPos(&cursorPos);
+            POINT mousePos;
+            GetCursorPos(&mousePos);
 
-            float ndcX = (2.0f * cursorPos.x) / SCREEN_WIDTH - 1.0f;
-            float ndcY = -(2.0f * cursorPos.y) / SCREEN_HEIGHT + 1.0f;
+			ScreenToClient(Window::get().getHWND(), &mousePos);
 
-            XMVECTOR screenCursorPos = XMVectorSet(ndcX, ndcY, 0.0f, 1.0f);
-            XMVECTOR worldCursorPos = XMVector4Transform(screenCursorPos, camera->getInvViewProjMat());
-            XMStoreFloat4(&(pbmpmIterConstants.mousePosition), worldCursorPos);
+            float ndcX = (2.0f * mousePos.x / clientWidth) - 1.0f;
+            float ndcY = 1.0f - (2.0f * mousePos.y / clientHeight);
 
-            pbmpmIterConstants.mouseFunction = 0;
-            pbmpmIterConstants.mouseRadius = 1000;
+			XMFLOAT4 prevMousePos = pbmpmIterConstants.mousePosition;
+			ComputeMouseRay(
+				Window::get().getHWND(),
+				ndcX,
+				ndcY,
+				camera->getProjMat(),
+				camera->getViewMat(),
+                pbmpmIterConstants.mousePosition,
+                pbmpmIterConstants.mouseDirection
+			);
+
+            pbmpmIterConstants.mouseRadius = 5.0;
+            pbmpmIterConstants.mouseVelocity = 100.0;
+
             scene.updatePBMPMConstants(pbmpmIterConstants);
         }
         else {
             pbmpmIterConstants.mouseActivation = 0;
+			scene.updatePBMPMConstants(pbmpmIterConstants);
         }
 
         //compute pbmpm + mesh shader
@@ -114,7 +145,12 @@ int main() {
         ImGui::NewFrame();
 
         //draw ImGUI
-        drawImGUIWindow(pbmpmIterConstants, io, &renderMeshlets, &renderMode, scene.getFluidIsovalue(), scene.getFluidKernelScale());
+        drawImGUIWindow(pbmpmIterConstants, io, &renderMeshlets, &renderMode, 
+            scene.getFluidIsovalue(), 
+            scene.getFluidKernelScale(), 
+            scene.getFluidKernelRadius(), 
+            scene.getPBMPMSubstepCount(),
+            scene.getNumParticles());
 
         //render ImGUI
         ImGui::Render();

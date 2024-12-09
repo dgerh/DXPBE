@@ -4,4 +4,4 @@
 "DescriptorTable(UAV(u0, numDescriptors=1)), " \
 "SRV(t2, space=0), " \
 "UAV(u1, space=0), " \
-"RootConstants(num32BitConstants=3, b0), " \
+"RootConstants(num32BitConstants=10, b0), " \

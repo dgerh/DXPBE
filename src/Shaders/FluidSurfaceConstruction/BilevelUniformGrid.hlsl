@@ -4,6 +4,7 @@
 
 // SRV for positions buffer (input buffer)
 StructuredBuffer<float4> positionsBuffer : register(t0);
+StructuredBuffer<int> materialsBuffer : register(t1);
 
 // UAV for the bilevel uniform grid (output buffers)
 RWStructuredBuffer<int> cellParticleCounts : register(u0);
@@ -26,6 +27,11 @@ void main(uint3 globalThreadId : SV_DispatchThreadID) {
     if (globalThreadId.x >= cb.numParticles) {
         return;
     }
+
+    // Check that the particle is water, return otherwise
+	if (materialsBuffer[globalThreadId.x] != 0) {
+		return;
+	}
 
     float3 position = positionsBuffer[globalThreadId.x].xyz;
     int3 cellIndices = getCellIndex(position);

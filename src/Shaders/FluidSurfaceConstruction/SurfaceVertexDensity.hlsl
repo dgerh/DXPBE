@@ -62,10 +62,9 @@ void main( uint3 globalThreadId : SV_DispatchThreadID ) {
     float3 vertPos = cb.minBounds + float3(globalSurfaceVertIndex3d) * cb.resolution;
     float totalDensity = 0.0f;
 
-    // In the paper, rather than a static (1, 1, 1) search radius, theirs is variable. That said, they do default it to 1 in their repo, and say as much in the paper. 
-    // Anything larger than 1 is honestly prohibitively expensive for real time anyway.
-    int3 minLoopBounds = max(globalSurfaceVertIndex3d - int3(1, 1, 1), int3(0, 0, 0));
-    int3 maxLoopBounds = min(globalSurfaceVertIndex3d, cb.dimensions - int3(1, 1, 1)); // Note, this is NOT a mistake. Not supposed to add 1 here. Each vertex has at most 8 abutting cells.
+    int kernelOffset = int(0.999 * cb.kernelRadius / cb.resolution);
+    int3 minLoopBounds = max(globalSurfaceVertIndex3d - kernelOffset - int3(1, 1, 1), int3(0, 0, 0));
+    int3 maxLoopBounds = min(globalSurfaceVertIndex3d + kernelOffset, cb.dimensions - int3(1, 1, 1)); // Note, this is NOT a mistake. Not supposed to add 1 here. Each vertex has at most 8 abutting cells.
 
     // And now we're iterating over the (maximum) 8 cells that abut the vertex.
     for (int z = minLoopBounds.z; z <= maxLoopBounds.z; z++) {
@@ -79,7 +78,7 @@ void main( uint3 globalThreadId : SV_DispatchThreadID ) {
                     int particleIdx = cellParticleIndices[neighborCellIdx1d * MAX_PARTICLES_PER_CELL + i];
                     float3 particlePos = positionsBuffer[particleIdx].xyz;
                     float3 r = vertPos - particlePos;
-                    totalDensity += isotropicKernel(r, cb.resolution); // (In the paper, they use kernel radius here, which is defaulted to 0.99 * cell resolution)
+                    totalDensity += isotropicKernel(r, cb.kernelRadius);
                 }
             }
         }

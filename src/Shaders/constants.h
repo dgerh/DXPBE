@@ -38,6 +38,7 @@ struct BilevelUniformGridConstants {
     float3 minBounds;
     float resolution;
     float kernelScale;
+    float kernelRadius;
 };
 
 struct MeshShadingConstants {

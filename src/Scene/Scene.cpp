@@ -2,10 +2,9 @@
 
 Scene::Scene(Camera* p_camera, DXContext* context)
 	:  camera(p_camera),
-	pbmpmRP("PBMPMVertexShader.cso", "PixelShader.cso", "PBMPMVertexRootSignature.cso", *context, CommandListID::PBMPM_RENDER_ID,
+	pbmpmRP("PBMPMVertexShader.cso", "PBMPMPixelShader.cso", "PBMPMRootSignature.cso", *context, CommandListID::PBMPM_RENDER_ID,
 		D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE),
-	pbmpmIC(100),
-	pbmpmScene(context, &pbmpmRP, pbmpmIC),
+	pbmpmScene(context, &pbmpmRP),
 	objectRPWire("VertexShader.cso", "PixelShader.cso", "RootSignature.cso", *context, CommandListID::OBJECT_RENDER_WIRE_ID,
 		D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE),
 	objectSceneWire(context, &objectRPWire, pbmpmScene.getSimShapes(), true), 
@@ -55,7 +54,7 @@ void Scene::compute() {
 	pbmpmScene.compute();
 	fluidScene.compute(
 		pbmpmScene.getPositionBuffer(),
-		pbmpmScene.getParticleCount()
+		pbmpmScene.transferAndGetNumParticles()
 	);
 }
 

@@ -23,6 +23,8 @@ public:
 
 	void updateViewMat();
 
+	XMFLOAT4 getForward() { return { forward.x, forward.y, forward.z, 0 }; }
+
 	XMMATRIX getViewMat();
 	XMMATRIX getProjMat();
 	XMMATRIX getViewProjMat();

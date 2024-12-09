@@ -42,6 +42,8 @@ DXContext::DXContext() {
 		cmdAllocators[i] = cmdAllocator;
 	}
 
+    initTimingResources();
+
 }
 
 DXContext::~DXContext() {
@@ -61,6 +63,9 @@ DXContext::~DXContext() {
     cmdQueue.Release();
     device.Release();
     dxgiFactory.Release();
+
+    queryHeap->Release();
+    queryResultBuffer->Release();
 }
 
 void DXContext::signalAndWait() {
@@ -111,6 +116,52 @@ void DXContext::signalAndWaitForFence(ComPointer<ID3D12Fence>& fence, UINT64& fe
         CloseHandle(eventHandle);
     }
     fenceValue++;
+}
+
+void DXContext::initTimingResources() {
+    // Create a query heap for timestamp queries
+    D3D12_QUERY_HEAP_DESC queryHeapDesc = {};
+    queryHeapDesc.Type = D3D12_QUERY_HEAP_TYPE_TIMESTAMP;
+    queryHeapDesc.Count = 2; // One for start and one for end timestamp
+    queryHeapDesc.NodeMask = 0;
+
+    device->CreateQueryHeap(&queryHeapDesc, IID_PPV_ARGS(&queryHeap));
+
+    // Create a resource to store the query results
+    D3D12_RESOURCE_DESC bufferDesc = CD3DX12_RESOURCE_DESC::Buffer(2 * sizeof(UINT64));
+    CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_READBACK);
+    device->CreateCommittedResource(
+        &heapProps,
+        D3D12_HEAP_FLAG_NONE,
+        &bufferDesc,
+        D3D12_RESOURCE_STATE_COPY_DEST,
+        nullptr,
+        IID_PPV_ARGS(&queryResultBuffer));
+
+}
+
+double DXContext::readTimingQueryData() {
+    UINT64* queryData;
+    UINT64 startTime, endTime;
+    queryResultBuffer->Map(0, nullptr, reinterpret_cast<void**>(&queryData));
+    startTime = queryData[0];
+    endTime = queryData[1];
+    queryResultBuffer->Unmap(0, nullptr);
+
+    UINT64 gpuFrequency;
+    cmdQueue->GetTimestampFrequency(&gpuFrequency);
+    double timeInMs = (endTime - startTime) / static_cast<double>(gpuFrequency) * 1000.0;
+
+    return timeInMs;
+}
+
+void DXContext::startTimingQuery(ID3D12GraphicsCommandList6* cmdList) {
+    cmdList->EndQuery(queryHeap.Get(), D3D12_QUERY_TYPE_TIMESTAMP, 0);
+}
+
+void DXContext::endTimingQuery(ID3D12GraphicsCommandList6* cmdList) {
+    cmdList->EndQuery(queryHeap.Get(), D3D12_QUERY_TYPE_TIMESTAMP, 1);
+    cmdList->ResolveQueryData(queryHeap.Get(), D3D12_QUERY_TYPE_TIMESTAMP, 0, 2, queryResultBuffer.Get(), 0);
 }
 
 ComPointer<IDXGIFactory7>& DXContext::getFactory() {

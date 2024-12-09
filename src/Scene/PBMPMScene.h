@@ -7,15 +7,16 @@
 #include "../D3D/IndexBuffer.h"
 #include "../D3D/Pipeline/ComputePipeline.h"
 #include "Geometry.h"
+#include <iostream>
 #include <math.h>
 
 // Keep consistent with PBMPMCommon.hlsl
 
-const unsigned int ParticleDispatchSize = 64;
 const unsigned int GridDispatchSize = 8;
 const unsigned int BukkitSize = 2;
 const unsigned int BukkitHaloSize = 1;
-const unsigned int GuardianSize = 3;
+
+const float PARTICLE_RADIUS = 0.5f;
 
 const unsigned int maxParticles = 500000;
 const unsigned int maxTimestampCount = 2048;
@@ -49,10 +50,11 @@ struct PBMPMConstants {
 
 	//mouse stuff
 	XMFLOAT4 mousePosition;
+	XMFLOAT4 mouseDirection;
 	unsigned int mouseActivation;
 	unsigned int mouseRadius;
 	unsigned int mouseFunction;
-	unsigned int mouseVelocity;
+	float mouseVelocity;
 };
 
 struct SimShape {
@@ -66,13 +68,13 @@ struct SimShape {
 	int material;
 	float emissionRate;
 	int radius;
+	XMFLOAT3 padding;
 };
 
 struct PBMPMParticle {
 	XMFLOAT3 displacement; //2->3
 	float mass;
 	XMFLOAT3X3 deformationGradient;
-	float material;
 	float volume;
 	float lambda;
 	XMFLOAT3X3 deformationDisplacement;
@@ -105,7 +107,7 @@ struct BukkitThreadData {
 
 class PBMPMScene : public Drawable {
 public:
-	PBMPMScene(DXContext* context, RenderPipeline* renderPipeline, unsigned int instanceCount);
+	PBMPMScene(DXContext* context, RenderPipeline* renderPipeline);
 
 	void constructScene();
 
@@ -121,11 +123,14 @@ public:
 
 	StructuredBuffer* getPositionBuffer() { return &positionBuffer; }
 
-	int getParticleCount();
+	int transferAndGetNumParticles();
+	unsigned int getNumParticles() { return numParticles; }
 
 	PBMPMConstants getConstants() { return constants; }
 
 	std::vector<SimShape>& getSimShapes() { return shapes; }
+
+	unsigned int* getSubstepCount() { return &substepCount; }
 
 private:
 	DXContext* context;
@@ -147,7 +152,6 @@ private:
 	D3D12_INDEX_BUFFER_VIEW ibv;
 	VertexBuffer vertexBuffer;
 	IndexBuffer indexBuffer;
-	unsigned int instanceCount;
 	ID3D12CommandSignature* commandSignature = nullptr;
 	ID3D12CommandSignature* renderCommandSignature = nullptr;
 	UINT64 fenceValue = 1;
@@ -158,6 +162,7 @@ private:
 
 	// Particle Buffers
 	StructuredBuffer positionBuffer;
+	StructuredBuffer materialBuffer;
 
 	// Scene Buffers
 	StructuredBuffer particleBuffer;
@@ -181,4 +186,11 @@ private:
 	void bukkitizeParticles();
 
 	void doEmission(StructuredBuffer* gridBuffer);
+
+	unsigned int frameCount{ 0 };
+	unsigned int startTime{ 0 };
+	unsigned int endTime{ 0 };
+
+	unsigned int substepCount{ 5 };
+	unsigned int numParticles{ 0 };
 };

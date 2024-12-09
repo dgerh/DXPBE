@@ -7,10 +7,7 @@
 ConstantBuffer<PBMPMConstants> g_simConstants : register(b0);
 
 // Define the constant buffer with an array of SimShapes
-cbuffer shapes : register(b1)
-{
-    SimShape g_shapes[1]; // Adjust the size of the array as needed
-};
+StructuredBuffer<SimShape> g_shapes : register(t0);
 
 // Structured Buffer for particles (read-write UAV)
 RWStructuredBuffer<Particle> g_particles : register(u0);
@@ -22,10 +19,13 @@ RWStructuredBuffer<int> g_freeIndices : register(u1);
 RWStructuredBuffer<int> g_particleCount : register(u2);
 
 // Structured Buffer for grid source data (read-only SRV)
-StructuredBuffer<int> g_grid : register(t0);
+StructuredBuffer<int> g_grid : register(t1);
 
 // Structured Buffer for positions (read-write UAV)
 RWStructuredBuffer<float4> g_positions : register(u3);
+
+// Structured Buffer for materials (read-write UAV)
+RWStructuredBuffer<int> g_materials : register(u4);
 
 uint hash(uint input)
 {
@@ -51,7 +51,7 @@ bool insideGuardian(uint3 id, uint3 gridSize, uint guardianSize)
     return true;
 }
 
-Particle createParticle(float material, float mass, float volume)
+Particle createParticle(float mass, float volume)
 {
     Particle particle;
 
@@ -60,7 +60,6 @@ Particle createParticle(float material, float mass, float volume)
     particle.deformationDisplacement = ZeroMatrix;
 
     particle.mass = mass;
-    particle.material = material;
     particle.volume = volume;
 
     particle.lambda = 0.0;
@@ -70,7 +69,7 @@ Particle createParticle(float material, float mass, float volume)
     return particle;
 }
 
-void addParticle(float3 position, float material, float volume, float density, float jitterScale)
+void addParticle(float3 position, int material, float volume, float density, float jitterScale)
 {
     uint particleIndex = 0;
     // First check the free list to see if we can reuse a particle slot
@@ -93,13 +92,13 @@ void addParticle(float3 position, float material, float volume, float density, f
     float2 jitter = float2(-0.25, -0.25) + 0.5 * float2(float(jitterX % 10) / 10, float(jitterY % 10) / 10);
 
     Particle newParticle = createParticle(
-        material,
         volume * density,
         volume
     );
 
     g_particles[particleIndex] = newParticle;
-	g_positions[particleIndex] = float4(position + float3(jitter.x, jitter.y, 0.f) * jitterScale, 1.0);
+    g_materials[particleIndex] = material;
+    g_positions[particleIndex] = float4(position + float3(jitter.x, jitter.y, 0.f) * jitterScale, 1.0);
 }
 
 [numthreads(GridDispatchSize, GridDispatchSize, GridDispatchSize)]

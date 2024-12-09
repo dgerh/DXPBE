@@ -2,13 +2,9 @@
 #include "../constants.h"
 #include "utils.hlsl"
 
-struct Uniforms {
-    int3 gridCellDimensions;
-};
-
 // Inputs
 // Constant buffer (root constant)
-ConstantBuffer<Uniforms> cb : register(b0);
+ConstantBuffer<BilevelUniformGridConstants> cb : register(b0);
 // SRV for surface block indices
 StructuredBuffer<int> surfaceBlockIndices : register(t0);
 // SRV for the surface cells
@@ -92,7 +88,7 @@ void main(uint3 localThreadId : SV_GroupThreadID, uint3 groupId : SV_GroupID) {
     // First order of business: we launched a thread for each cell within surface blocks. We need to figure out the global index for this thread's cell. 
     int surfaceBlockIdx1d = surfaceBlockIndices[globalThreadId / CELLS_PER_BLOCK];
     // By aligning the number of threads per workgroup with the number of threads in a block, we can use the local thread ID as a proxy for the local cell index.
-    int3 surfaceBlockIdx3d = to3D(surfaceBlockIdx1d, cb.gridCellDimensions / CELLS_PER_BLOCK_EDGE);
+    int3 surfaceBlockIdx3d = to3D(surfaceBlockIdx1d, cb.dimensions / CELLS_PER_BLOCK_EDGE);
     int3 localCellIndex3d = int3(localThreadId.x, localThreadId.y, localThreadId.z);
     int3 globalCellIndex3d = surfaceBlockIdx3d * CELLS_PER_BLOCK_EDGE + localCellIndex3d;
 
@@ -108,10 +104,12 @@ void main(uint3 localThreadId : SV_GroupThreadID, uint3 groupId : SV_GroupID) {
     // fetch its surrounding extra-surface cells (and itself).
     // This follows the same strategy as the bilevel uniform grid shader.
     float halfCellsPerBlockEdgeMinusOne = ((CELLS_PER_BLOCK_EDGE - 1) / 2.0);
+    int kernelOffset = int(0.999 * cb.kernelRadius / cb.resolution);
     int3 edge = int3(trunc((localCellIndex3d - halfCellsPerBlockEdgeMinusOne) / halfCellsPerBlockEdgeMinusOne));
+    edge *= kernelOffset;
     // By converting neighbors to global-space here, we can clamp to the grid bounds and avoid 
     // out-of-bounds checks in every loop iteration.
-    int3 globalNeighborCells = clamp(globalCellIndex3d + edge, int3(0, 0, 0), cb.gridCellDimensions - 1);
+    int3 globalNeighborCells = clamp(globalCellIndex3d + edge, int3(0, 0, 0), cb.dimensions - 1);
     int3 minSearchBounds = min(globalNeighborCells, globalCellIndex3d);
     int3 maxSearchBounds = max(globalNeighborCells, globalCellIndex3d);
 
@@ -120,7 +118,7 @@ void main(uint3 localThreadId : SV_GroupThreadID, uint3 groupId : SV_GroupID) {
         for (int y = minSearchBounds.y; y <= maxSearchBounds.y; y++) {
             for (int x = minSearchBounds.x; x <= maxSearchBounds.x; x++) {
                 int3 globalNeighborCellIndex3d = int3(x, y, z);
-                int globalNeighborCellIndex1d = to1D(globalNeighborCellIndex3d, cb.gridCellDimensions);
+                int globalNeighborCellIndex1d = to1D(globalNeighborCellIndex3d, cb.dimensions);
                 
                 int3 localNeighborCellIndex3d = globalNeighborCellIndex3d - globalNeighborCellOrigin;
                 int localNeighborCellIndex1d = to1D(localNeighborCellIndex3d, CELLS_PER_BLOCK_EDGE + 2);
@@ -134,8 +132,8 @@ void main(uint3 localThreadId : SV_GroupThreadID, uint3 groupId : SV_GroupID) {
     GroupMemoryBarrierWithGroupSync();
 
     // Similar trick as before to get the search bounds, but this time we're iterating over the full range of block cells (within grid bounds).
-    minSearchBounds = clamp(globalCellIndex3d - int3(1, 1, 1), int3(0, 0, 0), cb.gridCellDimensions - 1);
-    maxSearchBounds = clamp(globalCellIndex3d + int3(1, 1, 1), int3(0, 0, 0), cb.gridCellDimensions - 1);
+    minSearchBounds = clamp(globalCellIndex3d - int3(1, 1, 1) - int3(kernelOffset, kernelOffset, kernelOffset), int3(0, 0, 0), cb.dimensions - 1);
+    maxSearchBounds = clamp(globalCellIndex3d + int3(1, 1, 1) + int3(kernelOffset, kernelOffset, kernelOffset), int3(0, 0, 0), cb.dimensions - 1);
 
     // A cell is NOT a surface cell if either:
     // 1. All of its neighbors and itself are empty
@@ -181,6 +179,6 @@ void main(uint3 localThreadId : SV_GroupThreadID, uint3 groupId : SV_GroupID) {
 
     // Set surface vertices buffer
     if (isSurfaceCell) {
-        setGlobalSurfaceVertsFromSharedMem(globalCellIndex3d, (cb.gridCellDimensions + 1), localCellIndex3d, (CELLS_PER_BLOCK_EDGE + 1));
+        setGlobalSurfaceVertsFromSharedMem(globalCellIndex3d, (cb.dimensions + 1), localCellIndex3d, (CELLS_PER_BLOCK_EDGE + 1));
     }
 }

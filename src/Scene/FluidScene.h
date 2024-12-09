@@ -12,6 +12,7 @@ struct GridConstants {
     XMFLOAT3 minBounds;
     float resolution;
     float kernelScale;
+    float kernelRadius;
 };
 
 // TODO: can just combine this with grid constants
@@ -64,6 +65,7 @@ public:
 
     float* getIsovalue() { return &isovalue; }
     float* getKernelScale() { return &kernelScale; }
+    float* getKernelRadius() { return &kernelRadius; }
 
 private:
     void transitionBuffers(ID3D12GraphicsCommandList6* cmdList, D3D12_RESOURCE_STATES beforeState, D3D12_RESOURCE_STATES afterState);
@@ -101,5 +103,6 @@ private:
     StructuredBuffer surfaceVertexNormalBuffer;
 
     float isovalue{ 0.03f };
-    float kernelScale{ 1.0f };
+    float kernelScale{ 4.0f };
+    float kernelRadius{ 1.01f };
 };

@@ -55,8 +55,16 @@ public:
     ComPointer<ID3D12CommandQueue>& getCommandQueue();
     ComPointer<ID3D12CommandAllocator>& getCommandAllocator(CommandListID id) { return cmdAllocators[id]; };
     ID3D12GraphicsCommandList6* createCommandList(CommandListID id);
+    double readTimingQueryData();
+    void startTimingQuery(ID3D12GraphicsCommandList6* cmdList);
+    void endTimingQuery(ID3D12GraphicsCommandList6* cmdList);
 
 private:
+    void initTimingResources();
+
+    ComPointer<ID3D12QueryHeap> queryHeap;
+    ComPointer<ID3D12Resource> queryResultBuffer;
+
     ComPointer<IDXGIFactory7> dxgiFactory;
 
     ComPointer<ID3D12Device6> device;

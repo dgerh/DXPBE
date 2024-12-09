@@ -30,12 +30,16 @@ public:
 
 	float* getFluidIsovalue() { return fluidScene.getIsovalue(); }
 	float* getFluidKernelScale() { return fluidScene.getKernelScale(); }
+	float* getFluidKernelRadius() { return fluidScene.getKernelRadius(); }
+
+	unsigned int* getPBMPMSubstepCount() { return pbmpmScene.getSubstepCount(); }
+
+	int getNumParticles() { return pbmpmScene.getNumParticles(); }
 
 private:
 	Camera* camera;
 
 	RenderPipeline pbmpmRP;
-	unsigned int pbmpmIC;
 	PBMPMScene pbmpmScene;
 
 	RenderPipeline objectRPWire;

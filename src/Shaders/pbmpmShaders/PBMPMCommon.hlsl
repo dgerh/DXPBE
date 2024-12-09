@@ -52,10 +52,11 @@ struct PBMPMConstants {
 
     //mouse stuff
     float4 mousePosition;
+    float4 mouseDirection;
     unsigned int mouseActivation;
     unsigned int mouseRadius;
     unsigned int mouseFunction;
-    unsigned int mouseVelocity;
+    float mouseVelocity;
 };
 
 // Define constants for identity and zero matrices
@@ -66,7 +67,6 @@ struct Particle {
 	float3 displacement; //2->3
 	float mass;
     float3x3 deformationGradient;
-	float material;
 	float volume;
 	float lambda;
     float3x3 deformationDisplacement;
@@ -93,6 +93,7 @@ struct SimShape {
 	int material;
 	float emissionRate;
 	int radius;
+    float3 padding;
 };
 
 // Helper Functions

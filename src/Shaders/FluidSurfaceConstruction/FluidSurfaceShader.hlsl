@@ -1,5 +1,6 @@
 #include "FluidMeshRootSig.hlsl"
 #include "../constants.h"
+#include "../../Scene/SceneConstants.h"
 
 struct PSInput {
     float4 ndcPos: SV_Position;
@@ -56,6 +57,12 @@ float3 getMeshletColor(int index)
     return float3(r, g, b);
 }
 
+// Return the intersection point of a ray with an XZ plane at Y = 0
+float3 planeRayIntersect(float3 origin, float3 direction)
+{
+    return origin - direction * (origin.y / direction.y);
+}
+
 static const float3 baseColor = float3(0.7, 0.9, 1);
 
 [RootSignature(ROOTSIG)]
@@ -81,14 +88,10 @@ float4 main(PSInput input) : SV_Target
     float3 refractDir = refract(dir, input.normal, eta);
     float3 refraction;
 
-    float tMin, tMax;
-    if(intersectAABB(pos, refractDir, 
-                    cb.minBounds, cb.minBounds + cb.resolution * cb.dimensions,
-                    tMin, tMax)){
-        float dist = tMax;
-        float3 trans = clamp(exp(-remapTo01(dist, 1.0, 5.0)), 0.0, 1.0) * baseColor;
-        refraction = trans * radiance(refractDir);
-    }
+    float3 meshPos = planeRayIntersect(cb.cameraPos, dir);
+    float dist = distance(pos, meshPos);
+    float3 trans = clamp(exp(-remapTo01(dist, 1.0, 30.0)), 0.0, 1.0) * baseColor;
+    refraction = trans * float4(GROUND_PLANE_COLOR, 1.0); // plane background color
 
     float3 baseColor = refraction * (1.0 - fr) + reflection * fr;
     return float4(gammaCorrect(baseColor), 1.0);
