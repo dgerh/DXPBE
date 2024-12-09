@@ -402,60 +402,7 @@ void PBMPMScene::constructScene() {
 
 	// Create Constant Data
 
-	//liquid
-	
-	/*constants = { {GRID_WIDTH, GRID_HEIGHT, GRID_DEPTH}, 0.01, 9.8, 0.2, 0.02,
-		(unsigned int)std::ceil(std::pow(10, 7)),
-		1, 4, 30, 1, 0, 0, 0, 0, 0, 0, 5, 0.2, 0, 0};*/
-	//sand
-	/*constants = { {GRID_WIDTH, GRID_HEIGHT, GRID_DEPTH}, 0.01,2.5, 0.4, 0.2,
-		(unsigned int)std::ceil(std::pow(10, 7)),
-		0, 3,35, 1, 0, 0, 0, 0, 0, 0, 5, 0.3, 1.5, 0.5};*/
 
-	//Visco
-	/*constants = { {GRID_WIDTH, GRID_HEIGHT, GRID_DEPTH},       
-	0.01f,             
-	2.0f,              
-	0.8f,              
-	0.1f,              
-	(unsigned int)std::ceil(std::pow(10, 7)), 
-	0,                 
-	3,                  
-	30.0f,               
-	1,                  
-	0,                 
-	0,                 
-	0,                  
-	0,                  
-	0,                  
-	0,                  
-	10,                 
-	0.2f,
-	1.5,
-	0.8};*/
-
-	//elastic
-	/*constants = { {GRID_WIDTH, GRID_HEIGHT, GRID_DEPTH},
-	0.01f,
-	2.0f,
-	1.2f,
-	0.3f,
-	(unsigned int)std::ceil(std::pow(10, 7)),
-	0,
-	3,
-	50.0f,
-	1,
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	10,
-	0.4f,
-	1.5f,
-	2.0f,
-	};*/
 
 
 
@@ -463,29 +410,7 @@ void PBMPMScene::constructScene() {
 		(unsigned int)std::ceil(std::pow(10, 7)),
 		1, 3,30, 1, 0, 0, 0, 0, 0, 0, 5, 0.9, 0, 0 };
 
-	//XMUINT3 gridSize; //2 -> 3
-	//float deltaTime;
-	//float gravityStrength;
-
-	//float liquidRelaxation;
-	//float liquidViscosity;
-	//unsigned int fixedPointMultiplier;
-
-	//unsigned int useGridVolumeForLiquid;
-	//unsigned int particlesPerCellAxis;
-
-	//float frictionAngle;
-	//unsigned int shapeCount;
-	//unsigned int simFrame;
-
-	//unsigned int bukkitCount;
-	//unsigned int bukkitCountX;
-	//unsigned int bukkitCountY;
-	//unsigned int bukkitCountZ; //added
-	//unsigned int iteration;
-	//unsigned int iterationCount;
-	//float borderFriction;
-	// 
+	
 	
 
 	
