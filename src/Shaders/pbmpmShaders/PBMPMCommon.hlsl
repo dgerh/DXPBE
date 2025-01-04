@@ -107,7 +107,8 @@ struct SimShape {
 uint gridVertexIndex(uint3 gridVertex, uint3 gridSize)
 {
 	// 5 components per grid vertex -- xyz and 2 weights
-	return 5 * (gridVertex.z * gridVertex.y * gridVertex.x + gridVertex.y * gridSize.x + gridVertex.x);
+	//return 5 * (gridVertex.z * gridVertex.y * gridVertex.x + gridVertex.y * gridSize.x + gridVertex.x);
+    return 5 * (gridVertex.z * gridSize.y * gridSize.x + gridVertex.y * gridSize.x + gridVertex.x);
 }
 
 // Function to decode a fixed-point integer to a floating-point value

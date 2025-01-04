@@ -106,11 +106,12 @@ float3x3 inverse(float3x3 m) {
     return adj * (1.0 / d);
 }
 
-float3x3 outerProduct(float3 x, float3 y) {
+float3x3 outerProduct(float3 x, float3 y)
+{
     return float3x3(
-        x.x * y.x, x.x * y.y, x.x * y.z,
-        x.y * y.x, x.y * y.y, x.y * y.z,
-        x.z * y.x, x.z * y.y, x.z * y.z
+        x * y.x,
+       x * y.y,
+       x * y.z
     );
 }
 
